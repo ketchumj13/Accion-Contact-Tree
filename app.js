@@ -128,12 +128,9 @@ function createContactCard(contact, index) {
       <a href="mailto:${contact.email}" class="action-btn action-btn--primary" aria-label="Send email to ${contact.name}">
         <img src="Outlook_Icon.png" alt="Email icon" class="action-icon"> Email
       </a>
-      ${phoneButton}
-      ${linkedinButton}
-      ${calendarButton}
-      <button class="action-btn" onclick="copyEmailAction('${contact.email}')" aria-label="Copy ${contact.name}'s email to clipboard">
-        📋 Copy Email
-      </button>
+  ${phoneButton}
+  ${linkedinButton}
+  ${calendarButton}
     </div>
   `;
   
@@ -143,21 +140,16 @@ function createContactCard(contact, index) {
 // Create action button with proper disabled state handling
 function createActionButton(icon, label, value, link, unavailableText) {
   const isAvailable = value && value.trim() !== '';
-  
-  if (isAvailable) {
-    const target = link.startsWith('tel:') ? '' : ' target="_blank"';
-    return `<a href="${link}" class="action-btn" aria-label="${label} - ${value}"${target}>
+
+  if (!isAvailable) {
+    // Return empty string to hide actions with no associated data
+    return '';
+  }
+
+  const target = link.startsWith('tel:') ? '' : ' target="_blank"';
+  return `<a href="${link}" class="action-btn" aria-label="${label} - ${value}"${target}>
       ${icon} ${label}
     </a>`;
-  } else {
-    return `<button class="action-btn action-btn--unavailable" 
-                    disabled 
-                    aria-label="${unavailableText}"
-                    onmouseenter="showTooltipHandler(event, '${unavailableText}')"
-                    onmouseleave="hideTooltipHandler()">
-      ${icon} ${label}
-    </button>`;
-  }
 }
 
 // Wrapper functions for tooltip events to ensure they're accessible globally
