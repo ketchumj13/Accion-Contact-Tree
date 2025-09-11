@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accion Labs • Microsoft Practice Contacts</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Main Contact Hub Page -->
+    <div id="main-page" class="page-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="container">
+                <h1 class="site-title">Accion Labs • Microsoft Practice Contacts</h1>
+                <p class="tagline">Talk to a human. Radical, I know.</p>
+            </div>
+        </header>
+
+        <!-- Contact Cards -->
+        <main class="main-content">
+            <div class="container">
+                <div id="contact-cards" class="contact-grid">
+                    <!-- Contact cards will be dynamically generated here -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Admin Access Link -->
+        <footer class="footer">
+            <div class="container">
+                <button id="admin-link" class="admin-link">Admin Access</button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="admin-page" class="page-container hidden">
+        <!-- Admin Header -->
+        <header class="header">
+            <div class="container">
+                <div class="admin-header">
+                    <h1 class="site-title">Contact Hub Admin</h1>
+                    <button id="back-to-main" class="btn btn--secondary">Back to Contacts</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Admin Content -->
+        <main class="main-content">
+            <div class="container">
+                <!-- Authentication Form -->
+                <div id="auth-form" class="auth-container">
+                    <div class="card">
+                        <div class="card__body">
+                            <h2>Admin Authentication</h2>
+                            <form id="admin-auth">
+                                <div class="form-group">
+                                    <label for="admin-password" class="form-label">Password</label>
+                                    <input type="password" id="admin-password" class="form-control" placeholder="Enter admin password" required>
+                                </div>
+                                <button type="submit" class="btn btn--primary btn--full-width">Login</button>
+                            </form>
+                            <p class="auth-hint">Demo password: admin123</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Panel (hidden until authenticated) -->
+                <div id="admin-panel" class="admin-panel hidden">
+                    <div class="admin-actions">
+                        <button id="add-contact-btn" class="btn btn--primary">Add New Contact</button>
+                    </div>
+
+                    <!-- Contact Form -->
+                    <div id="contact-form" class="contact-form hidden">
+                        <div class="card">
+                            <div class="card__body">
+                                <h3 id="form-title">Add New Contact</h3>
+                                <form id="contact-form-element">
+                                    <div class="form-grid">
+                                        <div class="form-group">
+                                            <label for="contact-name" class="form-label">Name <span class="required">*</span></label>
+                                            <input type="text" id="contact-name" class="form-control" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="contact-role" class="form-label">Role <span class="required">*</span></label>
+                                            <input type="text" id="contact-role" class="form-control" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="contact-city" class="form-label">City <span class="required">*</span></label>
+                                            <input type="text" id="contact-city" class="form-control" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="contact-email" class="form-label">Email <span class="required">*</span></label>
+                                            <input type="email" id="contact-email" class="form-control" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="contact-phone" class="form-label">Phone <span class="optional">(optional)</span></label>
+                                            <input type="tel" id="contact-phone" class="form-control" placeholder="e.g., +1 (555) 123-4567">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="contact-linkedin" class="form-label">LinkedIn <span class="optional">(optional)</span></label>
+                                            <input type="url" id="contact-linkedin" class="form-control" placeholder="e.g., https://linkedin.com/in/username">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="contact-calendar" class="form-label">Calendar Link <span class="optional">(optional)</span></label>
+                                            <input type="url" id="contact-calendar" class="form-control" placeholder="e.g., https://calendly.com/username">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="contact-photo" class="form-label">Photo URL <span class="optional">(optional)</span></label>
+                                            <input type="url" id="contact-photo" class="form-control" placeholder="e.g., https://example.com/photo.jpg">
+                                        </div>
+                                    </div>
+                                    <div class="form-actions">
+                                        <button type="submit" class="btn btn--primary">Save Contact</button>
+                                        <button type="button" id="cancel-form" class="btn btn--secondary">Cancel</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contact List -->
+                    <div id="admin-contacts" class="admin-contacts">
+                        <!-- Admin contact list will be generated here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Copy Success Toast -->
+    <div id="copy-toast" class="toast hidden">
+        <div class="toast-content">
+            <span>Email copied to clipboard!</span>
+        </div>
+    </div>
+
+    <!-- Tooltip for disabled buttons -->
+    <div id="tooltip" class="tooltip hidden">
+        <div class="tooltip-content"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
