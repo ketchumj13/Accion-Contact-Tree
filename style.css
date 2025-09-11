@@ -773,6 +773,22 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--color-text);
 }
 
+/* Site logo */
+.site-logo {
+  display: block;
+  margin: 0 auto var(--space-12) auto;
+  width: 160px;
+  max-width: 40%;
+  height: auto;
+}
+
+/* Action icons inside buttons */
+.action-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+}
+
 .tagline {
   font-size: var(--font-size-lg);
   color: var(--color-text-secondary);

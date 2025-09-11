@@ -91,26 +91,27 @@ function createContactCard(contact, index) {
   const photoUrl = contact.photo || defaultPhoto;
   
   // Create action buttons with proper disabled states and ARIA labels
+  // Use image icons for actions when available
   const phoneButton = createActionButton(
-    '📞', 
-    'Phone', 
-    contact.phone, 
+    '<img src="X_Twitter_Icon.png" alt="phone icon" class="action-icon">',
+    'Phone',
+    contact.phone,
     `tel:${contact.phone}`,
     'Phone not available'
   );
-  
+
   const linkedinButton = createActionButton(
-    '💼', 
-    'LinkedIn', 
-    contact.linkedin, 
+    '<img src="LinkedIn_Icon.png" alt="LinkedIn icon" class="action-icon">',
+    'LinkedIn',
+    contact.linkedin,
     contact.linkedin,
     'LinkedIn not available'
   );
-  
+
   const calendarButton = createActionButton(
-    '📅', 
-    'Calendar', 
-    contact.calendar, 
+    '<img src="Outlook_Icon.png" alt="calendar icon" class="action-icon">',
+    'Calendar',
+    contact.calendar,
     contact.calendar,
     'Calendar not available'
   );
