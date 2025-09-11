@@ -8,8 +8,8 @@ const initialContacts = [
     phone: "",
   linkedin: "https://www.linkedin.com/in/itarunagarwal/",
     calendar: "",
-    photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=320&h=320&fit=crop&crop=face",
-    alt: "Portrait of Tarun Agarwal"
+  photo: "Tarun_Headshot.jpg",
+  alt: "Portrait of Tarun Agarwal"
   },
   {
     name: "Jakob Ketchum", 
@@ -19,8 +19,8 @@ const initialContacts = [
     phone: "",
   linkedin: "https://www.linkedin.com/in/jakob-ketchum-6742303b/",
     calendar: "",
-    photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=320&h=320&fit=crop&crop=face",
-    alt: "Portrait of Jakob Ketchum"
+  photo: "Jakob_Headshot.jpg",
+  alt: "Portrait of Jakob Ketchum"
   },
   {
     name: "Sanket Shah",
@@ -30,8 +30,8 @@ const initialContacts = [
     phone: "",
     linkedin: "https://www.linkedin.com/in/sankettshah/",
     calendar: "",
-    photo: "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?w=320&h=320&fit=crop&crop=face",
-    alt: "Portrait of Sanket Shah"
+  photo: "Sanket_Headshot.jpg",
+  alt: "Portrait of Sanket Shah"
   }
 ];
 
