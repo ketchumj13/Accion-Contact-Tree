@@ -6,7 +6,7 @@ const initialContacts = [
     city: "New Jersey", 
     email: "tarun.agarwal@accionlabs.com",
     phone: "",
-    linkedin: "",
+  linkedin: "https://www.linkedin.com/in/itarunagarwal/",
     calendar: "",
     photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=320&h=320&fit=crop&crop=face",
     alt: "Portrait of Tarun Agarwal"
@@ -21,6 +21,17 @@ const initialContacts = [
     calendar: "",
     photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=320&h=320&fit=crop&crop=face",
     alt: "Portrait of Jakob Ketchum"
+  },
+  {
+    name: "Sanket Shah",
+    role: "Senior Solution Architect",
+    city: "Pune, India",
+    email: "sanket.shah@accionlabs.com",
+    phone: "",
+    linkedin: "https://www.linkedin.com/in/sankettshah/",
+    calendar: "",
+    photo: "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?w=320&h=320&fit=crop&crop=face",
+    alt: "Portrait of Sanket Shah"
   }
 ];
 
