@@ -1,0 +1,18 @@
+This snapshot contains the modified project files for Accion-Contact-Tree.
+
+Files included:
+- app.js (modified)
+- index.html (modified)
+- style.css (modified)
+- netlify_commit_contacts.js (Netlify function, renamed to avoid native function path collisions)
+- README-AUTO-COMMIT.md (added)
+- .github_scripts_prune_backups.js (prune script)
+- .github_workflow_prune_backups.yml (workflow)
+- apply-snapshot.sh (script to apply files into repo)
+
+Usage:
+1. Copy this folder into your repository root.
+2. Review the files and back up existing ones.
+3. Run `./apply-snapshot.sh` from the repository root to overwrite the target files.
+
+Note: apply-snapshot.sh will create backups of existing files with a .bak timestamp suffix.

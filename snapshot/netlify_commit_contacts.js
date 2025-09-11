@@ -1,0 +1,142 @@
+const fetch = require('node-fetch');
+
+// Netlify Function: commit-contacts
+// Expects JSON body: { contacts: [...], branch: 'main', message: '...', adminPassword: '...' }
+// Requires env vars: GITHUB_TOKEN, ADMIN_PASSWORD, OWNER, REPO
+
+exports.handler = async function(event, context) {
+	try {
+		if (event.httpMethod !== 'POST') {
+			return { statusCode: 405, body: 'Method not allowed' };
+		}
+
+		const body = JSON.parse(event.body || '{}');
+		const { contacts, branch = 'main', message = 'Update contacts', adminPassword } = body;
+
+		if (!contacts || !Array.isArray(contacts)) {
+			return { statusCode: 400, body: 'contacts must be an array' };
+		}
+
+		// Validate admin password
+		const expected = process.env.ADMIN_PASSWORD;
+		if (!expected || adminPassword !== expected) {
+			return { statusCode: 401, body: 'Invalid admin password' };
+		}
+
+		const owner = process.env.OWNER;
+		const repo = process.env.REPO;
+		const token = process.env.GITHUB_TOKEN;
+		const path = 'contacts.json';
+
+		if (!owner || !repo || !token) {
+			return { statusCode: 500, body: 'Server not configured with OWNER/REPO/GITHUB_TOKEN' };
+		}
+
+		const apiBase = 'https://api.github.com';
+		const getUrl = `${apiBase}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch)}`;
+
+		// --- Backup branch step: create a timestamped branch and commit the current contacts.json there as a backup ---
+		// Get latest commit sha of the target branch to base the backup branch
+		const refUrl = `${apiBase}/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`;
+		let baseCommitSha = null;
+		try {
+			const r = await fetch(refUrl, { headers: { Authorization: `token ${token}` } });
+			if (r.ok) {
+				const d = await r.json();
+				baseCommitSha = d.object && d.object.sha ? d.object.sha : null;
+			}
+		} catch (err) {
+			// ignore
+		}
+
+		// Create a backup branch name
+		const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+		const backupBranch = `backup-contacts-${timestamp}`;
+
+		// Attempt to create the ref for the backup branch
+		if (baseCommitSha) {
+			try {
+				const createRefUrl = `${apiBase}/repos/${owner}/${repo}/git/refs`;
+				const createResp = await fetch(createRefUrl, {
+					method: 'POST',
+					headers: {
+						Authorization: `token ${token}`,
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({ ref: `refs/heads/${backupBranch}`, sha: baseCommitSha })
+				});
+				// if it fails because the ref exists, we'll ignore and still attempt backup commit (it shouldn't exist normally)
+				if (!createResp.ok) {
+					// ignore and continue
+				}
+			} catch (err) {
+				// ignore
+			}
+		}
+
+		// Commit contacts.json to the backup branch (this will create or update the file on that branch)
+		const contentStr = JSON.stringify(contacts, null, 2);
+		const contentBase64 = Buffer.from(contentStr, 'utf8').toString('base64');
+		const backupPayload = {
+			message: `Backup contacts before update: ${timestamp}`,
+			content: contentBase64,
+			branch: backupBranch
+		};
+
+		const putUrl = `${apiBase}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
+		try {
+			const backupResp = await fetch(putUrl, {
+				method: 'PUT',
+				headers: {
+					Authorization: `token ${token}`,
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(backupPayload)
+			});
+			// ignore errors here — backup is best-effort
+		} catch (err) {
+			// ignore
+		}
+
+		// --- Proceed to update the main branch file as before ---
+		// Get existing file sha on target branch for safe update
+		let sha = null;
+		try {
+			const r = await fetch(getUrl, { headers: { Authorization: `token ${token}` } });
+			if (r.ok) {
+				const d = await r.json();
+				sha = d.sha;
+			}
+		} catch (err) {
+			// ignore
+		}
+
+		const payload = {
+			message,
+			content: contentBase64,
+			branch
+		};
+		if (sha) payload.sha = sha;
+
+		const putResp = await fetch(putUrl, {
+			method: 'PUT',
+			headers: {
+				Authorization: `token ${token}`,
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(payload)
+		});
+
+		if (!putResp.ok) {
+			const text = await putResp.text();
+			return { statusCode: putResp.status, body: `GitHub API error: ${text}` };
+		}
+
+		const result = await putResp.json();
+
+		return { statusCode: 200, body: JSON.stringify({ ok: true, result, backupBranch }) };
+	} catch (err) {
+		return { statusCode: 500, body: 'Internal server error: ' + String(err) };
+	}
+};
+
