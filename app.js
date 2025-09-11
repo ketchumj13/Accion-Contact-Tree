@@ -6,6 +6,8 @@ const initialContacts = [
     city: "New Jersey", 
     email: "tarun.agarwal@accionlabs.com",
     phone: "",
+  twitter: "",
+  github: "",
   linkedin: "https://www.linkedin.com/in/itarunagarwal/",
     calendar: "",
   photo: "Tarun_Headshot.jpg",
@@ -17,6 +19,8 @@ const initialContacts = [
     city: "Texas",
     email: "jakob.ketchum@accionlabs.com",
     phone: "",
+  twitter: "",
+  github: "",
   linkedin: "https://www.linkedin.com/in/jakob-ketchum-6742303b/",
     calendar: "",
   photo: "Jakob_Headshot.jpg",
@@ -28,6 +32,8 @@ const initialContacts = [
     city: "Pune, India",
     email: "sanket.shah@accionlabs.com",
     phone: "",
+  twitter: "",
+  github: "",
     linkedin: "https://www.linkedin.com/in/sankettshah/",
     calendar: "",
   photo: "Sanket_Headshot.jpg",
@@ -108,6 +114,22 @@ function createContactCard(contact, index) {
     'LinkedIn not available'
   );
 
+  const twitterButton = createActionButton(
+    '<img src="X_Twitter_Icon.png" alt="Twitter icon" class="action-icon">',
+    'Twitter',
+    contact.twitter,
+    contact.twitter,
+    'Twitter not available'
+  );
+
+  const githubButton = createActionButton(
+    '<img src="Github_Icon.png" alt="GitHub icon" class="action-icon">',
+    'GitHub',
+    contact.github,
+    contact.github,
+    'GitHub not available'
+  );
+
   const calendarButton = createActionButton(
     '<img src="Calendar_Icon.png" alt="calendar icon" class="action-icon">',
     'Calendar',
@@ -130,6 +152,8 @@ function createContactCard(contact, index) {
       </a>
   ${phoneButton}
   ${linkedinButton}
+  ${twitterButton}
+  ${githubButton}
   ${calendarButton}
     </div>
   `;
@@ -396,6 +420,8 @@ function createAdminContactCard(contact, index) {
           <p><strong>Email:</strong> ${contact.email}</p>
           ${getFieldDisplay(contact.phone, 'Phone')}
           ${getFieldDisplay(contact.linkedin, 'LinkedIn')}
+          ${getFieldDisplay(contact.twitter, 'Twitter')}
+          ${getFieldDisplay(contact.github, 'GitHub')}
           ${getFieldDisplay(contact.calendar, 'Calendar')}
           ${getFieldDisplay(contact.photo, 'Photo URL')}
         </div>
@@ -426,13 +452,18 @@ function showContactForm(contact = null, index = -1) {
     document.getElementById('contact-city').value = contact.city || '';
     document.getElementById('contact-email').value = contact.email || '';
     document.getElementById('contact-phone').value = contact.phone || '';
-    document.getElementById('contact-linkedin').value = contact.linkedin || '';
+  document.getElementById('contact-linkedin').value = contact.linkedin || '';
+  document.getElementById('contact-twitter').value = contact.twitter || '';
+  document.getElementById('contact-github').value = contact.github || '';
     document.getElementById('contact-calendar').value = contact.calendar || '';
     document.getElementById('contact-photo').value = contact.photo || '';
   } else {
     title.textContent = 'Add New Contact';
     const formElement = document.getElementById('contact-form-element');
     if (formElement) formElement.reset();
+  // ensure new optional fields are cleared if present
+  const tIn = document.getElementById('contact-twitter'); if (tIn) tIn.value = '';
+  const gIn = document.getElementById('contact-github'); if (gIn) gIn.value = '';
   }
   
   form.classList.remove('hidden');
@@ -448,6 +479,8 @@ function hideContactForm() {
   if (form) form.classList.add('hidden');
   if (formElement) formElement.reset();
   editingIndex = -1;
+  const tIn = document.getElementById('contact-twitter'); if (tIn) tIn.value = '';
+  const gIn = document.getElementById('contact-github'); if (gIn) gIn.value = '';
 }
 
 // Handle contact form submission
@@ -460,7 +493,9 @@ function handleContactForm(e) {
     city: document.getElementById('contact-city').value.trim(),
     email: document.getElementById('contact-email').value.trim(),
     phone: document.getElementById('contact-phone').value.trim(),
-    linkedin: document.getElementById('contact-linkedin').value.trim(),
+  linkedin: document.getElementById('contact-linkedin').value.trim(),
+  twitter: document.getElementById('contact-twitter').value.trim(),
+  github: document.getElementById('contact-github').value.trim(),
     calendar: document.getElementById('contact-calendar').value.trim(),
     photo: document.getElementById('contact-photo').value.trim(),
     alt: `Portrait of ${document.getElementById('contact-name').value.trim()}`
@@ -483,6 +518,8 @@ function handleContactForm(e) {
   
   // Validate URLs if provided
   const urlFields = ['linkedin', 'calendar', 'photo'];
+  // include twitter and github in URL validation
+  urlFields.push('twitter', 'github');
   for (const field of urlFields) {
     if (formData[field] && !isValidUrl(formData[field])) {
       showToast(`Please enter a valid URL for ${field}.`, 'error');
