@@ -93,7 +93,7 @@ function createContactCard(contact, index) {
   // Create action buttons with proper disabled states and ARIA labels
   // Use image icons for actions when available
   const phoneButton = createActionButton(
-    '<img src="X_Twitter_Icon.png" alt="phone icon" class="action-icon">',
+    '<img src="Phone_Icon.png" alt="phone icon" class="action-icon">',
     'Phone',
     contact.phone,
     `tel:${contact.phone}`,
@@ -109,7 +109,7 @@ function createContactCard(contact, index) {
   );
 
   const calendarButton = createActionButton(
-    '<img src="Outlook_Icon.png" alt="calendar icon" class="action-icon">',
+    '<img src="Calendar_Icon.png" alt="calendar icon" class="action-icon">',
     'Calendar',
     contact.calendar,
     contact.calendar,
@@ -126,7 +126,7 @@ function createContactCard(contact, index) {
     </div>
     <div class="contact-actions">
       <a href="mailto:${contact.email}" class="action-btn action-btn--primary" aria-label="Send email to ${contact.name}">
-        📧 Email
+        <img src="Outlook_Icon.png" alt="Email icon" class="action-icon"> Email
       </a>
       ${phoneButton}
       ${linkedinButton}
