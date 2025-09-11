@@ -777,8 +777,8 @@ h1, h2, h3, h4, h5, h6 {
 .site-logo {
   display: block;
   margin: 0 auto var(--space-12) auto;
-  width: 160px;
-  max-width: 40%;
+  width: 400px; /* increased 2.5x from 160px */
+  max-width: 80%;
   height: auto;
 }
 
