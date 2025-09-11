@@ -147,7 +147,7 @@ function createContactCard(contact, index) {
       </div>
     </div>
     <div class="contact-actions">
-      <a href="mailto:${contact.email}" class="action-btn action-btn--primary" aria-label="Send email to ${contact.name}">
+      <a href="mailto:${contact.email}" class="action-btn" aria-label="Send email to ${contact.name}">
         <img src="Outlook_Icon.png" alt="Email icon" class="action-icon"> Email
       </a>
   ${phoneButton}
