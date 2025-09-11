@@ -17,7 +17,7 @@ const initialContacts = [
     city: "Texas",
     email: "jakob.ketchum@accionlabs.com",
     phone: "",
-    linkedin: "",
+  linkedin: "https://www.linkedin.com/in/jakob-ketchum-6742303b/",
     calendar: "",
     photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=320&h=320&fit=crop&crop=face",
     alt: "Portrait of Jakob Ketchum"
