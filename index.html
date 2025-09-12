@@ -25,11 +25,21 @@
 
         <!-- Contact Cards -->
         <main class="main-content">
-            <div class="container">
-                <div id="contact-cards" class="contact-grid">
-                    <!-- Contact cards will be dynamically generated here -->
-                </div>
-            </div>
+                        <div class="container">
+                                <div id="contact-cards" class="contact-grid">
+                                        <!-- Contact cards will be dynamically generated here -->
+                                </div>
+
+                                <!-- Offerings Section -->
+                                <div class="offerings-section">
+                                    <button id="offerings-toggle" class="offerings-toggle" aria-expanded="false">
+                                        <span class="arrow">&#9654;</span> Offerings
+                                    </button>
+                                    <div id="offerings-list" class="offerings-list" style="display: none;">
+                                        <!-- Offerings will be dynamically generated here -->
+                                    </div>
+                                </div>
+                        </div>
         </main>
 
         <!-- Admin Access Link -->
@@ -137,9 +147,39 @@
                     </div>
 
                     <!-- Contact List -->
-                    <div id="admin-contacts" class="admin-contacts">
-                        <!-- Admin contact list will be generated here -->
-                    </div>
+                                        <!-- Offerings Admin Form -->
+                                        <div id="offerings-admin" class="offerings-admin card" style="margin-top: 2rem;">
+                                            <div class="card__body">
+                                                <h3>Add/Edit Offering</h3>
+                                                <form id="offerings-form">
+                                                    <div class="form-grid">
+                                                        <div class="form-group">
+                                                            <label for="offering-title" class="form-label">Title <span class="required">*</span></label>
+                                                            <input type="text" id="offering-title" class="form-control" required>
+                                                        </div>
+                                                        <div class="form-group">
+                                                            <label for="offering-pdf" class="form-label">PDF URL <span class="required">*</span></label>
+                                                            <input type="url" id="offering-pdf" class="form-control" placeholder="e.g., offerings/azure-migration.pdf" required>
+                                                        </div>
+                                                        <div class="form-group">
+                                                            <label for="offering-preview" class="form-label">Preview Image URL <span class="required">*</span></label>
+                                                            <input type="url" id="offering-preview" class="form-control" placeholder="e.g., offerings/azure-migration-preview.png" required>
+                                                        </div>
+                                                        <div class="form-group">
+                                                            <label for="offering-desc" class="form-label">Description <span class="optional">(optional)</span></label>
+                                                            <input type="text" id="offering-desc" class="form-control" placeholder="Short description">
+                                                        </div>
+                                                    </div>
+                                                    <div class="form-actions">
+                                                        <button type="submit" class="btn btn--primary">Add Offering</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+
+                                        <div id="admin-contacts" class="admin-contacts">
+                                                <!-- Admin contact list will be generated here -->
+                                        </div>
                 </div>
             </div>
         </main>
