@@ -42,9 +42,24 @@ const initialContacts = [
 ];
 
 // Application state
+
 let contacts = [];
 let isAuthenticated = false;
 let editingIndex = -1;
+let githubToken = null;
+
+// Prompt for GitHub token if not already set
+async function requireGitHubToken() {
+  if (githubToken) return githubToken;
+  let token = prompt('Enter your GitHub Personal Access Token (with repo scope):');
+  if (token && token.trim().length > 0) {
+    githubToken = token.trim();
+    return githubToken;
+  } else {
+    showToast('GitHub token is required to commit changes.', 'error');
+    throw new Error('GitHub token not provided');
+  }
+}
 
 // DOM elements
 const mainPage = document.getElementById('main-page');
