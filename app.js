@@ -48,6 +48,33 @@ let isAuthenticated = false;
 let editingIndex = -1;
 let githubToken = null;
 
+// Load offerings from localStorage or use default
+function loadOfferings() {
+  const saved = localStorage.getItem('accion-offerings');
+  if (saved) {
+    try {
+      offerings = JSON.parse(saved);
+    } catch (e) {
+      offerings = [];
+    }
+  }
+}
+
+function saveOfferings() {
+  localStorage.setItem('accion-offerings', JSON.stringify(offerings));
+}
+
+// Offerings data model (example)
+let offerings = [
+  {
+    title: "Azure Migration Services",
+    pdfUrl: "offerings/azure-migration.pdf",
+    previewImg: "offerings/azure-migration-preview.png",
+    description: "Overview of our Azure migration capabilities."
+  },
+  // Add more offerings as needed
+];
+
 // Prompt for GitHub token if not already set
 async function requireGitHubToken() {
   if (githubToken) return githubToken;
@@ -68,8 +95,19 @@ async function commitAdminChangeToGitHub() {
   const owner = 'ketchumj13';
   const repo = 'Accion-Contact-Tree';
   const baseBranch = 'main';
-  const filePath = 'contacts.json';
-  const commitMessage = 'Admin edit: update contacts';
+  // Commit both contacts and offerings
+  const filesToCommit = [
+    {
+      path: 'contacts.json',
+      content: JSON.stringify(contacts, null, 2),
+      message: 'Admin edit: update contacts'
+    },
+    {
+      path: 'offerings.json',
+      content: JSON.stringify(offerings, null, 2),
+      message: 'Admin edit: update offerings'
+    }
+  ];
 
   // 1. Get latest commit SHA of base branch
   const branchResp = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${baseBranch}`, {
@@ -97,23 +135,26 @@ async function commitAdminChangeToGitHub() {
   const contentStr = JSON.stringify(contacts, null, 2);
   const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
 
-  // 5. Commit file to new branch
-  const putUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
-  const putResp = await fetch(putUrl, {
-    method: 'PUT',
-    headers: {
-      Authorization: `token ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      message: commitMessage,
-      content: contentBase64,
-      branch: editBranch
-    })
-  });
-  if (!putResp.ok) {
-    const text = await putResp.text();
-    throw new Error(`GitHub API error: ${putResp.status} ${text}`);
+  // 5. Commit files to new branch (contacts.json and offerings.json)
+  for (const file of filesToCommit) {
+    const putUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${file.path}`;
+    const contentBase64 = btoa(unescape(encodeURIComponent(file.content)));
+    const putResp = await fetch(putUrl, {
+      method: 'PUT',
+      headers: {
+        Authorization: `token ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: file.message,
+        content: contentBase64,
+        branch: editBranch
+      })
+    });
+    if (!putResp.ok) {
+      const text = await putResp.text();
+      throw new Error(`GitHub API error: ${putResp.status} ${text}`);
+    }
   }
   showToast(`Committed to branch ${editBranch}.`, 'success');
   // Optionally, prompt for PR here
@@ -134,8 +175,48 @@ const tooltip = document.getElementById('tooltip');
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
   loadContacts();
-  renderContactCards();
-  setupEventListeners();
+    loadOfferings();
+    renderContactCards();
+    renderOfferings();
+    setupEventListeners();
+    setupOfferingsToggle();
+    setupOfferingsAdmin();
+// Render offerings section
+function renderOfferings() {
+  const offeringsList = document.getElementById('offerings-list');
+  if (!offeringsList) return;
+  offeringsList.innerHTML = '';
+  if (offerings.length === 0) {
+    offeringsList.innerHTML = '<p style="color: var(--color-text-secondary); font-style: italic;">No offerings available.</p>';
+    return;
+  }
+  offerings.forEach(offering => {
+    const offeringDiv = document.createElement('div');
+    offeringDiv.className = 'offering-item';
+    offeringDiv.innerHTML = `
+      <a href="${offering.pdfUrl}" target="_blank" class="offering-link">
+        <img src="${offering.previewImg}" alt="Preview of ${offering.title}" class="offering-preview">
+        <span class="offering-title">${offering.title}</span>
+      </a>
+      <div class="offering-desc">${offering.description || ''}</div>
+    `;
+    offeringsList.appendChild(offeringDiv);
+  });
+}
+
+// Collapse/expand logic for offerings section
+function setupOfferingsToggle() {
+  const toggleBtn = document.getElementById('offerings-toggle');
+  const offeringsList = document.getElementById('offerings-list');
+  if (!toggleBtn || !offeringsList) return;
+  toggleBtn.addEventListener('click', function() {
+    const expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+    toggleBtn.setAttribute('aria-expanded', !expanded);
+    offeringsList.style.display = expanded ? 'none' : 'block';
+    const arrow = toggleBtn.querySelector('.arrow');
+    if (arrow) arrow.innerHTML = expanded ? '&#9654;' : '&#9660;';
+  });
+}
 });
 
 // Load contacts from localStorage or use initial data
