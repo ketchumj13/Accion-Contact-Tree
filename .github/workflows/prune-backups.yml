@@ -1,24 +1,27 @@
+
 name: Prune backup branches
 
-on:
-	schedule:
-		- cron: '0 3 * * *' # daily at 03:00 UTC
-	workflow_dispatch:
 
-jobs:
-	prune:
-		runs-on: ubuntu-latest
-		steps:
-			- uses: actions/checkout@v4
-			- name: Set up Node
-				uses: actions/setup-node@v4
-				with:
-					node-version: 18
-			- name: Run prune script
-				env:
-					GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-					GITHUB_REPOSITORY: ${{ github.repository }}
-					DAYS: '30'
-				run: |
-					node .github/scripts/prune-backups.js
+  schedule:
+    - cron: '0 3 * * *' # daily at 03:00 UTC
+  workflow_dispatch:
+
+
+  prune:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Run prune script
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          DAYS: '30'
+        run: |
+          node .github/scripts/prune-backups.js
+
+
 

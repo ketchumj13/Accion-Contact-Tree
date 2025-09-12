@@ -41,95 +41,126 @@ const initialContacts = [
 	}
 ];
 
-// Application state
-let contacts = [];
-let isAuthenticated = false;
-let editingIndex = -1;
-let baseSnapshot = null; // store base version when opening edit to support 3-way merge
+// Save a JSON file to a GitHub repo by creating/updating a file using the REST API
+// Note: This requires a Personal Access Token with repo scope. This operation runs in the user's browser.
+async function saveToGitHub({ owner, repo, path, branch = 'main', message = 'Update contacts', token, contentObj }) {
+	if (!token) throw new Error('No token provided');
 
-// DOM elements
-const mainPage = document.getElementById('main-page');
-const adminPage = document.getElementById('admin-page');
-const contactCardsContainer = document.getElementById('contact-cards');
-const adminContactsContainer = document.getElementById('admin-contacts');
-const copyToast = document.getElementById('copy-toast');
-const tooltip = document.getElementById('tooltip');
+	const apiBase = 'https://api.github.com';
+	const getUrl = `${apiBase}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch)}`;
 
-// Initialize the application
-document.addEventListener('DOMContentLoaded', async function() {
-	await loadContacts();
-	renderContactCards();
-	setupEventListeners();
-});
-
-// Load contacts from localStorage or use initial data
-// Load contacts from localStorage, then try to fetch contacts.json from site, then fallback to initial data
-async function loadContacts() {
-	const savedContacts = localStorage.getItem('accion-contacts');
-	if (savedContacts) {
-		try {
-			contacts = JSON.parse(savedContacts);
-			return;
-		} catch (e) {
-			console.error('Failed to parse saved contacts, falling back to other sources', e);
-		}
-	}
-
-	// Try to fetch contacts.json served with the site (for global edits committed to the repo)
+	// Check if file exists to get sha (for update)
+	let sha = null;
 	try {
-		const resp = await fetch('contacts.json', { cache: 'no-store' });
+		const resp = await fetch(getUrl, { headers: { Authorization: `token ${token}` } });
 		if (resp.ok) {
 			const data = await resp.json();
-			if (Array.isArray(data) && data.length > 0) {
-				contacts = data;
-				// populate localStorage so current browser also has the latest copy
-				saveContacts();
-				return;
-			}
+			sha = data.sha;
 		}
 	} catch (err) {
-		// ignore fetch errors (file may not exist), fall back to initial contacts
-		console.warn('Could not fetch contacts.json from site root:', err);
+		// ignore - file may not exist yet
 	}
 
-	// Fallback to initial contacts
-	contacts = [...initialContacts];
-	saveContacts();
+	const contentStr = JSON.stringify(contentObj, null, 2);
+	const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
+
+	const payload = {
+		message,
+		content: contentBase64,
+		branch
+	};
+	if (sha) payload.sha = sha;
+
+	const putUrl = `${apiBase}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
+	const putResp = await fetch(putUrl, {
+		method: 'PUT',
+		headers: {
+			Authorization: `token ${token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify(payload)
+	});
+
+	if (!putResp.ok) {
+		const text = await putResp.text();
+		throw new Error(`GitHub API error: ${putResp.status} ${text}`);
+	}
+	return await putResp.json();
+
+// Edit contact
+function editContact(index) {
+	const contact = contacts[index];
+	showContactForm(contact, index);
 }
 
-// Save contacts to localStorage
-function saveContacts() {
-	localStorage.setItem('accion-contacts', JSON.stringify(contacts));
-}
-
-// Render contact cards on main page
-function renderContactCards() {
-	contactCardsContainer.innerHTML = '';
+// Delete contact
+function deleteContact(index) {
+	const contact = contacts[index];
   
-	contacts.forEach((contact, index) => {
-		const card = createContactCard(contact, index);
-		contactCardsContainer.appendChild(card);
+	if (confirm(`Are you sure you want to delete ${contact.name}?\n\nThis action cannot be undone.`)) {
+		try {
+			contacts.splice(index, 1);
+			saveContacts();
+			renderAdminContacts();
+			showToast(`${contact.name} has been deleted.`, 'success');
+		} catch (error) {
+			showToast('Failed to delete contact. Please try again.', 'error');
+			console.error('Delete failed:', error);
+		}
+	}
+}
+
+// Handle keyboard navigation and shortcuts
+document.addEventListener('keydown', function(e) {
+	// Escape key handling
+	if (e.key === 'Escape') {
+		const contactForm = document.getElementById('contact-form');
+    
+		if (!adminPage.classList.contains('hidden')) {
+			if (contactForm && !contactForm.classList.contains('hidden')) {
+				hideContactForm();
+			} else if (isAuthenticated) {
+				if (confirm('Are you sure you want to return to the main page?')) {
+					showMainPage();
+				}
+			}
+		}
+		hideTooltip();
+	}
+  
+	// Quick admin access with Ctrl+A
+	if (e.ctrlKey && e.key === 'a' && !e.target.matches('input, textarea')) {
+		e.preventDefault();
+		showAdminPage();
+	}
+});
+
+// Handle window resize for responsive design
+window.addEventListener('resize', function() {
+	// Hide tooltip on resize to prevent positioning issues
+	hideTooltip();
+  
+	// Force re-render if needed for responsive adjustments
+	if (mainPage && !mainPage.classList.contains('hidden')) {
+		renderContactCards();
+	}
+});
+
+// Handle online/offline status
+window.addEventListener('online', () => {
+	showToast('Connection restored!', 'success');
+});
+
+window.addEventListener('offline', () => {
+	showToast('You are now offline. Some features may not work.', 'warning');
+});
+
+// Initialize service worker for offline functionality if available
+if ('serviceWorker' in navigator) {
+	window.addEventListener('load', () => {
+		console.log('Contact Hub application loaded successfully');
 	});
 }
-
-// Create a contact card element
-function createContactCard(contact, index) {
-	const card = document.createElement('div');
-	card.className = 'contact-card';
-	card.setAttribute('data-index', index);
-  
-	const defaultPhoto = `https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=320&h=320&fit=crop&crop=face`;
-	const photoUrl = contact.photo || defaultPhoto;
-  
-	// Create action buttons with proper disabled states and ARIA labels
-	// Use image icons for actions when available
-	const phoneButton = createActionButton(
-		'<img src="Phone_Icon.png" alt="phone icon" class="action-icon">',
-		'Phone',
-		contact.phone,
-		`tel:${contact.phone}`,
-		'Phone not available'
-	);
 
 	const linkedinButton = createActionButton(
 		'<img src="LinkedIn_Icon.png" alt="LinkedIn icon" class="action-icon">',
@@ -162,7 +193,7 @@ function createContactCard(contact, index) {
 		contact.calendar,
 		'Calendar not available'
 	);
-  
+
 	card.innerHTML = `
 		<div class="contact-header">
 			<img src="${photoUrl}" alt="${contact.alt || `Portrait of ${contact.name}`}" class="contact-avatar">
@@ -182,7 +213,7 @@ function createContactCard(contact, index) {
 	${calendarButton}
 		</div>
 	`;
-  
+
 	return card;
 }
 
@@ -398,3 +429,1227 @@ function handleAdminAuth(e) {
 		isAuthenticated = true;
     
 		const authForm = document.getElementById('auth-form');
+		const adminPanel = document.getElementById('admin-panel');
+    
+		if (authForm) authForm.classList.add('hidden');
+		if (adminPanel) adminPanel.classList.remove('hidden');
+    
+		renderAdminContacts();
+		passwordInput.value = '';
+		// Attempt auto-commit to configured serverless endpoint (if present)
+		autoSaveToServer(password).catch(err => {
+			// Log but don't block the UI
+			console.warn('Auto-save to server failed:', err);
+		});
+		showToast('Successfully logged in as admin!', 'success');
+	} else {
+		showToast('Invalid password. Please try again.', 'error');
+		passwordInput.focus();
+	}
+}
+
+// Auto-save contacts to a server endpoint that will commit to GitHub
+async function autoSaveToServer(adminPassword) {
+	try {
+		const meta = document.querySelector('meta[name="auto-commit-endpoint"]');
+		const endpoint = meta && meta.content ? meta.content.trim() : null;
+		if (!endpoint) {
+			// No endpoint configured — nothing to do
+			return;
+		}
+
+		const payload = {
+			contacts,
+			branch: 'main',
+			message: 'Update contacts via web editor',
+			adminPassword
+		};
+
+		const resp = await fetch(endpoint, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(payload)
+		});
+
+		if (!resp.ok) {
+			const text = await resp.text();
+			throw new Error(`Server returned ${resp.status}: ${text}`);
+		}
+
+		return await resp.json();
+	} catch (err) {
+		throw err;
+	}
+}
+
+// Render admin contacts
+function renderAdminContacts() {
+	if (!adminContactsContainer) return;
+  
+	adminContactsContainer.innerHTML = '';
+  
+	if (contacts.length === 0) {
+		adminContactsContainer.innerHTML = `
+			<div class="card">
+				<div class="card__body" style="text-align: center; padding: var(--space-32);">
+					<p style="color: var(--color-text-secondary); font-style: italic;">No contacts found. Add your first contact above.</p>
+				</div>
+			</div>
+		`;
+		return;
+	}
+  
+	contacts.forEach((contact, index) => {
+		const card = createAdminContactCard(contact, index);
+		adminContactsContainer.appendChild(card);
+	});
+}
+
+// Create admin contact card
+function createAdminContactCard(contact, index) {
+	const card = document.createElement('div');
+	card.className = 'admin-contact-card';
+  
+	const getFieldDisplay = (value, fieldName) => {
+		return value && value.trim() !== '' 
+			? `<p><strong>${fieldName}:</strong> ${value}</p>`
+			: `<p class="field-empty"><strong>${fieldName}:</strong> Not provided</p>`;
+	};
+  
+	card.innerHTML = `
+		<div class="admin-contact-header">
+			<div class="admin-contact-info">
+				<h4>${contact.name}</h4>
+				<div class="admin-contact-details">
+					<p><strong>Role:</strong> ${contact.role} • ${contact.city}</p>
+					<p><strong>Email:</strong> ${contact.email}</p>
+					${getFieldDisplay(contact.phone, 'Phone')}
+					${getFieldDisplay(contact.linkedin, 'LinkedIn')}
+					${getFieldDisplay(contact.twitter, 'Twitter')}
+					${getFieldDisplay(contact.github, 'GitHub')}
+					${getFieldDisplay(contact.calendar, 'Calendar')}
+					${getFieldDisplay(contact.photo, 'Photo URL')}
+				</div>
+			</div>
+			<div class="admin-contact-actions">
+				<button class="btn btn--small btn--secondary" onclick="editContact(${index})" aria-label="Edit ${contact.name}">Edit</button>
+				<button class="btn btn--small btn--outline" onclick="deleteContact(${index})" aria-label="Delete ${contact.name}">Delete</button>
+			</div>
+		</div>
+	`;
+  
+	return card;
+}
+
+// Show contact form
+function showContactForm(contact = null, index = -1) {
+	const form = document.getElementById('contact-form');
+	const title = document.getElementById('form-title');
+  
+	if (!form || !title) return;
+  
+	editingIndex = index;
+  
+	if (contact) {
+	// capture base snapshot for three-way merge
+	baseSnapshot = Object.assign({}, contact);
+		title.textContent = `Edit Contact - ${contact.name}`;
+		document.getElementById('contact-name').value = contact.name || '';
+		document.getElementById('contact-role').value = contact.role || '';
+		document.getElementById('contact-city').value = contact.city || '';
+		document.getElementById('contact-email').value = contact.email || '';
+		document.getElementById('contact-phone').value = contact.phone || '';
+	document.getElementById('contact-linkedin').value = contact.linkedin || '';
+	document.getElementById('contact-twitter').value = contact.twitter || '';
+	document.getElementById('contact-github').value = contact.github || '';
+		document.getElementById('contact-calendar').value = contact.calendar || '';
+		document.getElementById('contact-photo').value = contact.photo || '';
+	} else {
+		title.textContent = 'Add New Contact';
+		const formElement = document.getElementById('contact-form-element');
+
+	const linkedinButton = createActionButton(
+		'<img src="LinkedIn_Icon.png" alt="LinkedIn icon" class="action-icon">',
+		'LinkedIn',
+		contact.linkedin,
+		contact.linkedin,
+		'LinkedIn not available'
+	);
+
+	const twitterButton = createActionButton(
+		'<img src="X_Twitter_Icon.png" alt="Twitter icon" class="action-icon">',
+		'Twitter',
+		contact.twitter,
+		contact.twitter,
+		'Twitter not available'
+	);
+
+	const githubButton = createActionButton(
+		'<img src="Github_Icon.png" alt="GitHub icon" class="action-icon">',
+		'GitHub',
+		contact.github,
+		contact.github,
+		'GitHub not available'
+	);
+
+	const calendarButton = createActionButton(
+		'<img src="Calendar_Icon.png" alt="calendar icon" class="action-icon">',
+		'Calendar',
+		contact.calendar,
+		contact.calendar,
+		'Calendar not available'
+	);
+
+	card.innerHTML = `
+		<div class="contact-header">
+			<img src="${photoUrl}" alt="${contact.alt || `Portrait of ${contact.name}`}" class="contact-avatar">
+			<div class="contact-info">
+				<h3>${contact.name}</h3>
+				<p class="contact-role">${contact.role} • ${contact.city}</p>
+			</div>
+		</div>
+		<div class="contact-actions">
+			<a href="mailto:${contact.email}" class="action-btn" aria-label="Send email to ${contact.name}">
+				<img src="Outlook_Icon.png" alt="Email icon" class="action-icon"> Email
+			</a>
+	${phoneButton}
+	${linkedinButton}
+	${twitterButton}
+	${githubButton}
+	${calendarButton}
+		</div>
+	`;
+
+	return card;
+}
+						alt: "Portrait of Jakob Ketchum"
+					}
+
+				// Application state
+				let contacts = [];
+				let isAuthenticated = false;
+				let editingIndex = -1;
+				let baseSnapshot = null; // store base version when opening edit to support 3-way merge
+
+				// DOM elements
+				const mainPage = document.getElementById('main-page');
+				const adminPage = document.getElementById('admin-page');
+				const contactCardsContainer = document.getElementById('contact-cards');
+				const adminContactsContainer = document.getElementById('admin-contacts');
+				const copyToast = document.getElementById('copy-toast');
+				const tooltip = document.getElementById('tooltip');
+
+				// Initialize the application
+				document.addEventListener('DOMContentLoaded', async function() {
+					await loadContacts();
+					renderContactCards();
+					setupEventListeners();
+				});
+
+				// Load contacts from localStorage or use initial data
+				// Load contacts from localStorage, then try to fetch contacts.json from site, then fallback to initial data
+				async function loadContacts() {
+					const savedContacts = localStorage.getItem('accion-contacts');
+					if (savedContacts) {
+						try {
+							contacts = JSON.parse(savedContacts);
+							return;
+						} catch (e) {
+							console.error('Failed to parse saved contacts, falling back to other sources', e);
+						}
+					}
+
+					// Try to fetch contacts.json served with the site (for global edits committed to the repo)
+					try {
+						const resp = await fetch('contacts.json', { cache: 'no-store' });
+						if (resp.ok) {
+							const data = await resp.json();
+							if (Array.isArray(data) && data.length > 0) {
+								contacts = data;
+								// populate localStorage so current browser also has the latest copy
+								saveContacts();
+								return;
+							}
+						}
+					} catch (err) {
+						// ignore fetch errors (file may not exist), fall back to initial contacts
+						console.warn('Could not fetch contacts.json from site root:', err);
+					}
+
+					// Fallback to initial contacts
+					contacts = [...initialContacts];
+					saveContacts();
+				}
+
+				// Save contacts to localStorage
+				function saveContacts() {
+					localStorage.setItem('accion-contacts', JSON.stringify(contacts));
+				}
+
+				// Render contact cards on main page
+				function renderContactCards() {
+					contactCardsContainer.innerHTML = '';
+
+					contacts.forEach((contact, index) => {
+						const card = createContactCard(contact, index);
+						contactCardsContainer.appendChild(card);
+					});
+				}
+
+				// Create a contact card element
+				function createContactCard(contact, index) {
+					const card = document.createElement('div');
+					card.className = 'contact-card';
+					card.setAttribute('data-index', index);
+
+					const defaultPhoto = `https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=320&h=320&fit=crop&crop=face`;
+					const photoUrl = contact.photo || defaultPhoto;
+
+					// Create action buttons with proper disabled states and ARIA labels
+					// Use image icons for actions when available
+					const phoneButton = createActionButton(
+						'<img src="Phone_Icon.png" alt="phone icon" class="action-icon">',
+						'Phone',
+						contact.phone,
+						`tel:${contact.phone}`,
+						'Phone not available'
+					);
+
+					const linkedinButton = createActionButton(
+						'<img src="LinkedIn_Icon.png" alt="LinkedIn icon" class="action-icon">',
+						'LinkedIn',
+						contact.linkedin,
+						contact.linkedin,
+						'LinkedIn not available'
+					);
+
+					const twitterButton = createActionButton(
+						'<img src="X_Twitter_Icon.png" alt="Twitter icon" class="action-icon">',
+						'Twitter',
+						contact.twitter,
+						contact.twitter,
+						'Twitter not available'
+					);
+
+					const githubButton = createActionButton(
+						'<img src="Github_Icon.png" alt="GitHub icon" class="action-icon">',
+						'GitHub',
+						contact.github,
+						contact.github,
+						'GitHub not available'
+					);
+
+					const calendarButton = createActionButton(
+						'<img src="Calendar_Icon.png" alt="calendar icon" class="action-icon">',
+						'Calendar',
+						contact.calendar,
+						contact.calendar,
+						'Calendar not available'
+					);
+
+					card.innerHTML = `
+						<div class="contact-header">
+							<img src="${photoUrl}" alt="${contact.alt || `Portrait of ${contact.name}`}" class="contact-avatar">
+							<div class="contact-info">
+								<h3>${contact.name}</h3>
+								<p class="contact-role">${contact.role} • ${contact.city}</p>
+							</div>
+						</div>
+						<div class="contact-actions">
+							<a href="mailto:${contact.email}" class="action-btn" aria-label="Send email to ${contact.name}">
+								<img src="Outlook_Icon.png" alt="Email icon" class="action-icon"> Email
+							</a>
+					${phoneButton}
+					${linkedinButton}
+					${twitterButton}
+					${githubButton}
+					${calendarButton}
+						</div>
+					`;
+
+					return card;
+				}
+				// Create action button with proper disabled state handling
+				function createActionButton(icon, label, value, link, unavailableText) {
+					const isAvailable = value && value.trim() !== '';
+
+					if (!isAvailable) {
+						// Return empty string to hide actions with no associated data
+						return '';
+					}
+
+					const target = link.startsWith('tel:') ? '' : ' target="_blank"';
+					return `<a href="${link}" class="action-btn" aria-label="${label} - ${value}"${target}>
+							${icon} ${label}
+						</a>`;
+				}
+
+				// Wrapper functions for tooltip events to ensure they're accessible globally
+				function showTooltipHandler(event, text) {
+					showTooltip(event, text);
+				}
+
+				function hideTooltipHandler() {
+					hideTooltip();
+				}
+
+				// Wrapper function for copy email action
+				function copyEmailAction(email) {
+					copyEmail(email);
+				}
+
+				// Show tooltip for disabled buttons
+				function showTooltip(event, text) {
+					if (!tooltip) return;
+  
+					const tooltipContent = tooltip.querySelector('.tooltip-content');
+					tooltipContent.textContent = text;
+  
+					const rect = event.target.getBoundingClientRect();
+					tooltip.style.left = `${rect.left + rect.width / 2}px`;
+					tooltip.style.top = `${rect.top - 35}px`;
+					tooltip.style.transform = 'translateX(-50%)';
+  
+					tooltip.classList.remove('hidden');
+					tooltip.classList.add('show');
+				}
+
+				// Hide tooltip
+				function hideTooltip() {
+					if (!tooltip) return;
+  
+					tooltip.classList.remove('show');
+					setTimeout(() => {
+						tooltip.classList.add('hidden');
+					}, 150);
+				}
+
+				// Copy email to clipboard
+				async function copyEmail(email) {
+					try {
+						await navigator.clipboard.writeText(email);
+						showToast('Email copied to clipboard!', 'success');
+					} catch (err) {
+						// Fallback for older browsers
+						try {
+							const textArea = document.createElement('textarea');
+							textArea.value = email;
+							textArea.style.position = 'fixed';
+							textArea.style.opacity = '0';
+							document.body.appendChild(textArea);
+							textArea.select();
+							document.execCommand('copy');
+							document.body.removeChild(textArea);
+							showToast('Email copied to clipboard!', 'success');
+						} catch (fallbackErr) {
+							showToast('Failed to copy email. Please try manually.', 'error');
+							console.error('Copy failed:', fallbackErr);
+						}
+					}
+				}
+
+				// Show toast notification with type support
+				function showToast(message, type = 'success') {
+					if (!copyToast) return;
+  
+					const content = copyToast.querySelector('.toast-content span');
+					content.textContent = message;
+  
+					// Reset classes and set background based on type
+					copyToast.className = 'toast';
+					if (type === 'error') {
+						copyToast.style.background = 'var(--color-error)';
+					} else if (type === 'warning') {
+						copyToast.style.background = 'var(--color-warning)';
+					} else {
+						copyToast.style.background = 'var(--color-success)';
+					}
+  
+					copyToast.classList.remove('hidden');
+					copyToast.classList.add('show');
+  
+					setTimeout(() => {
+						copyToast.classList.remove('show');
+						setTimeout(() => {
+							copyToast.classList.add('hidden');
+						}, 300);
+					}, 3000);
+				}
+
+				// Setup event listeners
+				function setupEventListeners() {
+					// Admin link - Fixed to properly handle admin access
+					const adminLink = document.getElementById('admin-link');
+					if (adminLink) {
+						adminLink.addEventListener('click', (e) => {
+							e.preventDefault();
+							showAdminPage();
+						});
+					}
+  
+					// Back to main
+					const backToMain = document.getElementById('back-to-main');
+					if (backToMain) {
+						backToMain.addEventListener('click', () => {
+							showMainPage();
+						});
+					}
+  
+					// Admin authentication
+					const adminAuth = document.getElementById('admin-auth');
+					if (adminAuth) {
+						adminAuth.addEventListener('submit', handleAdminAuth);
+					}
+  
+					// Add contact button
+					const addContactBtn = document.getElementById('add-contact-btn');
+					if (addContactBtn) {
+						addContactBtn.addEventListener('click', () => {
+							showContactForm();
+						});
+					}
+  
+					// Contact form
+					const contactFormElement = document.getElementById('contact-form-element');
+					if (contactFormElement) {
+						contactFormElement.addEventListener('submit', handleContactForm);
+					}
+  
+					const cancelForm = document.getElementById('cancel-form');
+					if (cancelForm) {
+						cancelForm.addEventListener('click', hideContactForm);
+					}
+
+					// Export / Import
+					const exportBtn = document.getElementById('export-btn');
+					if (exportBtn) exportBtn.addEventListener('click', exportContacts);
+
+					const importInput = document.getElementById('import-file-input');
+					if (importInput) importInput.addEventListener('change', handleImportFile);
+
+					const saveGithubBtn = document.getElementById('save-github-btn');
+					if (saveGithubBtn) saveGithubBtn.addEventListener('click', saveToGitHubPrompt);
+  
+					// Hide tooltip on scroll or click outside
+					document.addEventListener('scroll', hideTooltip);
+					document.addEventListener('click', (e) => {
+						if (!e.target.closest('.action-btn--unavailable')) {
+							hideTooltip();
+						}
+					});
+				}
+
+				// Show admin page
+				function showAdminPage() {
+					if (!mainPage || !adminPage) return;
+  
+					mainPage.classList.add('hidden');
+					adminPage.classList.remove('hidden');
+  
+					const authForm = document.getElementById('auth-form');
+					const adminPanel = document.getElementById('admin-panel');
+  
+					if (!isAuthenticated) {
+						if (authForm) authForm.classList.remove('hidden');
+						if (adminPanel) adminPanel.classList.add('hidden');
+					} else {
+						if (authForm) authForm.classList.add('hidden');
+						if (adminPanel) adminPanel.classList.remove('hidden');
+						renderAdminContacts();
+					}
+				}
+
+				// Show main page
+				function showMainPage() {
+					if (!mainPage || !adminPage) return;
+  
+					adminPage.classList.add('hidden');
+					mainPage.classList.remove('hidden');
+					renderContactCards();
+				}
+
+				// Handle admin authentication
+				function handleAdminAuth(e) {
+					e.preventDefault();
+  
+					const passwordInput = document.getElementById('admin-password');
+					if (!passwordInput) return;
+  
+					const password = passwordInput.value;
+  
+					if (password === 'accionmicrosoft25') {
+						isAuthenticated = true;
+    
+						const authForm = document.getElementById('auth-form');
+						const adminPanel = document.getElementById('admin-panel');
+    
+						if (authForm) authForm.classList.add('hidden');
+						if (adminPanel) adminPanel.classList.remove('hidden');
+    
+						renderAdminContacts();
+						passwordInput.value = '';
+						// Attempt auto-commit to configured serverless endpoint (if present)
+						autoSaveToServer(password).catch(err => {
+							// Log but don't block the UI
+							console.warn('Auto-save to server failed:', err);
+						});
+						showToast('Successfully logged in as admin!', 'success');
+					} else {
+						showToast('Invalid password. Please try again.', 'error');
+						passwordInput.focus();
+					}
+				}
+
+				// Auto-save contacts to a server endpoint that will commit to GitHub
+				async function autoSaveToServer(adminPassword) {
+					try {
+						const meta = document.querySelector('meta[name="auto-commit-endpoint"]');
+						const endpoint = meta && meta.content ? meta.content.trim() : null;
+						if (!endpoint) {
+							// No endpoint configured — nothing to do
+							return;
+						}
+
+						const payload = {
+							contacts,
+							branch: 'main',
+							message: 'Update contacts via web editor',
+							adminPassword
+						};
+
+						const resp = await fetch(endpoint, {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json'
+							},
+							body: JSON.stringify(payload)
+						});
+
+						if (!resp.ok) {
+							const text = await resp.text();
+							throw new Error(`Server returned ${resp.status}: ${text}`);
+						}
+
+						return await resp.json();
+					} catch (err) {
+						throw err;
+					}
+				}
+
+				// Render admin contacts
+				function renderAdminContacts() {
+					if (!adminContactsContainer) return;
+  
+					adminContactsContainer.innerHTML = '';
+  
+					if (contacts.length === 0) {
+						adminContactsContainer.innerHTML = `
+							<div class="card">
+								<div class="card__body" style="text-align: center; padding: var(--space-32);">
+									<p style="color: var(--color-text-secondary); font-style: italic;">No contacts found. Add your first contact above.</p>
+								</div>
+							</div>
+						`;
+						return;
+					}
+  
+					contacts.forEach((contact, index) => {
+						const card = createAdminContactCard(contact, index);
+						adminContactsContainer.appendChild(card);
+					});
+				}
+
+				// Create admin contact card
+				function createAdminContactCard(contact, index) {
+					const card = document.createElement('div');
+					card.className = 'admin-contact-card';
+  
+					const getFieldDisplay = (value, fieldName) => {
+						return value && value.trim() !== '' 
+							? `<p><strong>${fieldName}:</strong> ${value}</p>`
+							: `<p class="field-empty"><strong>${fieldName}:</strong> Not provided</p>`;
+					};
+  
+					card.innerHTML = `
+						<div class="admin-contact-header">
+							<div class="admin-contact-info">
+								<h4>${contact.name}</h4>
+								<div class="admin-contact-details">
+									<p><strong>Role:</strong> ${contact.role} • ${contact.city}</p>
+									<p><strong>Email:</strong> ${contact.email}</p>
+									${getFieldDisplay(contact.phone, 'Phone')}
+									${getFieldDisplay(contact.linkedin, 'LinkedIn')}
+									${getFieldDisplay(contact.twitter, 'Twitter')}
+									${getFieldDisplay(contact.github, 'GitHub')}
+									${getFieldDisplay(contact.calendar, 'Calendar')}
+									${getFieldDisplay(contact.photo, 'Photo URL')}
+								</div>
+							</div>
+							<div class="admin-contact-actions">
+								<button class="btn btn--small btn--secondary" onclick="editContact(${index})" aria-label="Edit ${contact.name}">Edit</button>
+								<button class="btn btn--small btn--outline" onclick="deleteContact(${index})" aria-label="Delete ${contact.name}">Delete</button>
+							</div>
+						</div>
+					`;
+  
+					return card;
+				}
+
+				// Show contact form
+				function showContactForm(contact = null, index = -1) {
+					const form = document.getElementById('contact-form');
+					const title = document.getElementById('form-title');
+  
+					if (!form || !title) return;
+  
+					editingIndex = index;
+  
+					if (contact) {
+					// capture base snapshot for three-way merge
+					baseSnapshot = Object.assign({}, contact);
+						title.textContent = `Edit Contact - ${contact.name}`;
+						document.getElementById('contact-name').value = contact.name || '';
+						document.getElementById('contact-role').value = contact.role || '';
+						document.getElementById('contact-city').value = contact.city || '';
+						document.getElementById('contact-email').value = contact.email || '';
+						document.getElementById('contact-phone').value = contact.phone || '';
+					document.getElementById('contact-linkedin').value = contact.linkedin || '';
+					document.getElementById('contact-twitter').value = contact.twitter || '';
+					document.getElementById('contact-github').value = contact.github || '';
+						document.getElementById('contact-calendar').value = contact.calendar || '';
+						document.getElementById('contact-photo').value = contact.photo || '';
+					} else {
+						title.textContent = 'Add New Contact';
+						const formElement = document.getElementById('contact-form-element');
+						if (formElement) formElement.reset();
+					// ensure new optional fields are cleared if present
+					const tIn = document.getElementById('contact-twitter'); if (tIn) tIn.value = '';
+					const gIn = document.getElementById('contact-github'); if (gIn) gIn.value = '';
+					}
+  
+					form.classList.remove('hidden');
+					const nameInput = document.getElementById('contact-name');
+					if (nameInput) nameInput.focus();
+				}
+
+				// Hide contact form
+				function hideContactForm() {
+					const form = document.getElementById('contact-form');
+					const formElement = document.getElementById('contact-form-element');
+  
+					if (form) form.classList.add('hidden');
+					if (formElement) formElement.reset();
+					editingIndex = -1;
+					const tIn = document.getElementById('contact-twitter'); if (tIn) tIn.value = '';
+					const gIn = document.getElementById('contact-github'); if (gIn) gIn.value = '';
+				}
+
+				// Handle contact form submission
+				async function handleContactForm(e) {
+					e.preventDefault();
+  
+					const formData = {
+						name: document.getElementById('contact-name').value.trim(),
+						role: document.getElementById('contact-role').value.trim(),
+						city: document.getElementById('contact-city').value.trim(),
+						email: document.getElementById('contact-email').value.trim(),
+						phone: document.getElementById('contact-phone').value.trim(),
+					linkedin: document.getElementById('contact-linkedin').value.trim(),
+					twitter: document.getElementById('contact-twitter').value.trim(),
+					github: document.getElementById('contact-github').value.trim(),
+						calendar: document.getElementById('contact-calendar').value.trim(),
+						photo: document.getElementById('contact-photo').value.trim(),
+					alt: `Portrait of ${document.getElementById('contact-name').value.trim()}`
+					};
+  
+					// Validate required fields
+					if (!formData.name || !formData.role || !formData.city || !formData.email) {
+						showToast('Please fill in all required fields.', 'error');
+						return;
+					}
+  
+					// Validate email format
+					const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+					if (!emailRegex.test(formData.email)) {
+						showToast('Please enter a valid email address.', 'error');
+						const emailInput = document.getElementById('contact-email');
+						if (emailInput) emailInput.focus();
+						return;
+					}
+  
+					// Validate URLs if provided
+					const urlFields = ['linkedin', 'calendar', 'photo'];
+					// include twitter and github in URL validation
+					urlFields.push('twitter', 'github');
+					for (const field of urlFields) {
+						if (formData[field] && !isValidUrl(formData[field])) {
+							showToast(`Please enter a valid URL for ${field}.`, 'error');
+							const fieldInput = document.getElementById(`contact-${field}`);
+							if (fieldInput) fieldInput.focus();
+							return;
+						}
+					}
+  
+					try {
+						// Prepare metadata for versioning/conflict detection
+						if (editingIndex >= 0) {
+							// We're editing an existing contact — capture its previous timestamp
+							const prev = contacts[editingIndex] || {};
+							const prevUpdatedAt = prev.updatedAt || null;
+
+							// Check remote for conflicting edits since we loaded
+							const conflict = await checkRemoteConflict(prevUpdatedAt, formData.email);
+							if (conflict) {
+								const overwrite = confirm(`A newer remote version of this contact exists (updated ${conflict.remote.updatedAt}).\n\nSelect OK to overwrite the remote with your changes, or Cancel to abort and load remote changes.`);
+								if (!overwrite) {
+									// Load remote changes into local and surface them to admin
+									await loadRemoteAndReplace(conflict.remote);
+									showToast('Loaded remote changes for this contact. Please re-open the edit form.', 'warning');
+									return;
+								}
+							}
+
+							// set metadata and increment version
+							formData.updatedAt = new Date().toISOString();
+							formData.version = (contacts[editingIndex].version || 0) + 1;
+							contacts[editingIndex] = formData;
+							showToast('Contact updated successfully!', 'success');
+						} else {
+							// Adding a new contact — check remote to avoid duplicates
+							const remoteContacts = await fetchRemoteContacts();
+							if (remoteContacts) {
+								const existing = remoteContacts.find(c => c.email && c.email.toLowerCase() === formData.email.toLowerCase());
+								if (existing) {
+									const overwrite = confirm(`A contact with this email already exists in the site data (updated ${existing.updatedAt || 'unknown'}).\n\nSelect OK to overwrite it with your entry, or Cancel to abort.`);
+									if (!overwrite) {
+										// Load remote contact into local list to avoid duplication
+										await loadRemoteAndReplace(existing);
+										showToast('Loaded remote contact. Please re-open add form if you still want to add.', 'warning');
+										return;
+									} else {
+										// Replace existing
+										const idx = contacts.findIndex(c => c.email && c.email.toLowerCase() === existing.email.toLowerCase());
+										if (idx >= 0) {
+											formData.updatedAt = new Date().toISOString();
+											formData.version = (contacts[idx].version || 0) + 1;
+											contacts[idx] = formData;
+										} else {
+											formData.updatedAt = new Date().toISOString();
+											formData.version = 1;
+											contacts.push(formData);
+										}
+										showToast('Contact added/overwritten successfully!', 'success');
+									}
+								} else {
+									// Normal new contact
+									formData.updatedAt = new Date().toISOString();
+									formData.version = 1;
+									contacts.push(formData);
+									showToast('Contact added successfully!', 'success');
+								}
+							} else {
+								// No remote to check; proceed normally
+								formData.updatedAt = new Date().toISOString();
+								formData.version = 1;
+								contacts.push(formData);
+								showToast('Contact added successfully!', 'success');
+							}
+						}
+
+						saveContacts();
+						renderAdminContacts();
+						hideContactForm();
+					} catch (error) {
+						showToast('Failed to save contact. Please try again.', 'error');
+						console.error('Save failed:', error);
+					}
+				}
+
+				// Validate URL format
+				function isValidUrl(string) {
+					try {
+						new URL(string);
+						return true;
+					} catch (_) {
+						return false;
+					}
+				}
+
+				// Fetch remote contacts.json from site root (if available)
+				async function fetchRemoteContacts() {
+					try {
+						const resp = await fetch('contacts.json', { cache: 'no-store' });
+						if (!resp.ok) return null;
+						const data = await resp.json();
+						if (!Array.isArray(data)) return null;
+						return data;
+					} catch (err) {
+						console.warn('fetchRemoteContacts failed:', err);
+						return null;
+					}
+				}
+
+				// Check if remote contact (by email) has a newer updatedAt than prevUpdatedAt
+				async function checkRemoteConflict(prevUpdatedAt, email) {
+					if (!email) return null;
+					const remoteContacts = await fetchRemoteContacts();
+					if (!remoteContacts) return null;
+					const remote = remoteContacts.find(c => c.email && c.email.toLowerCase() === email.toLowerCase());
+					if (!remote) return null;
+
+					if (!remote.updatedAt) return null;
+					if (!prevUpdatedAt) {
+						// local had no timestamp, but remote has one -> potential conflict
+						return { remote };
+					}
+
+					try {
+						const prevDate = new Date(prevUpdatedAt);
+						const remoteDate = new Date(remote.updatedAt);
+						if (remoteDate > prevDate) return { remote };
+					} catch (err) {
+						// if parsing fails, don't block
+						return null;
+					}
+					return null;
+				}
+
+				// Replace or insert a remote contact into local store and persist
+				async function loadRemoteAndReplace(remoteContact) {
+					if (!remoteContact || !remoteContact.email) return;
+					const idx = contacts.findIndex(c => c.email && c.email.toLowerCase() === remoteContact.email.toLowerCase());
+					if (idx >= 0) {
+						contacts[idx] = remoteContact;
+					} else {
+						contacts.push(remoteContact);
+					}
+					saveContacts();
+					renderAdminContacts();
+					renderContactCards();
+				}
+
+				// --- Three-way merge helpers ---
+				function computeMergeSuggestions(base, local, remote) {
+					// For each field, prefer the most recent edit. If local and remote differ from base, suggest remote if newer than base, else local.
+					const fields = ['name','role','city','email','phone','linkedin','twitter','github','calendar','photo','alt'];
+					const suggestions = {};
+					fields.forEach(f => {
+						const b = base && base[f] ? String(base[f]) : '';
+						const l = local && local[f] ? String(local[f]) : '';
+						const r = remote && remote[f] ? String(remote[f]) : '';
+
+						if (l === r) {
+							suggestions[f] = { choice: 'both', value: l, base: b, local: l, remote: r };
+							return;
+						}
+
+						// if base equals local but remote changed, prefer remote
+						if (b === l && r !== b) {
+							suggestions[f] = { choice: 'remote', value: r, base: b, local: l, remote: r };
+							return;
+						}
+
+						// if base equals remote but local changed, prefer local
+						if (b === r && l !== b) {
+							suggestions[f] = { choice: 'local', value: l, base: b, local: l, remote: r };
+							return;
+						}
+
+						// If both changed differently, pick the value with newer updatedAt by comparing timestamps on objects
+						const localTime = local && local.updatedAt ? new Date(local.updatedAt).getTime() : 0;
+						const remoteTime = remote && remote.updatedAt ? new Date(remote.updatedAt).getTime() : 0;
+						if (remoteTime >= localTime) {
+							suggestions[f] = { choice: 'remote', value: r, base: b, local: l, remote: r };
+						} else {
+							suggestions[f] = { choice: 'local', value: l, base: b, local: l, remote: r };
+						}
+					});
+					return suggestions;
+				}
+
+				function renderMergeDiff(suggestions) {
+					const container = document.getElementById('merge-diff-container');
+					container.innerHTML = '';
+					for (const [field, info] of Object.entries(suggestions)) {
+						const row = document.createElement('div');
+						row.className = 'merge-row';
+						row.innerHTML = `
+							<div class="merge-field">${field}</div>
+							<div class="merge-values">
+								<div class="merge-base"><strong>Base:</strong> ${escapeHtml(info.base || '')}</div>
+								<div class="merge-local"><strong>Your edit:</strong> ${escapeHtml(info.local || '')}</div>
+								<div class="merge-remote"><strong>Remote:</strong> ${escapeHtml(info.remote || '')}</div>
+								<div class="merge-suggest"><strong>Suggested:</strong> ${escapeHtml(info.value || '')}</div>
+							</div>
+						`;
+						container.appendChild(row);
+					}
+				}
+
+				function escapeHtml(str) {
+					return String(str)
+						.replace(/&/g, '&amp;')
+						.replace(/</g, '&lt;')
+						.replace(/>/g, '&gt;')
+						.replace(/"/g, '&quot;')
+						.replace(/'/g, '&#39;');
+				}
+
+				async function showMergeModal(base, local, remote) {
+					const suggestions = computeMergeSuggestions(base, local, remote);
+					renderMergeDiff(suggestions);
+
+					const modal = document.getElementById('merge-modal');
+					modal.classList.remove('hidden');
+
+					// Wire buttons
+					const applyBtn = document.getElementById('apply-merge-btn');
+					const manualBtn = document.getElementById('manual-merge-btn');
+					const cancelBtn = document.getElementById('cancel-merge-btn');
+
+					function cleanup() {
+						modal.classList.add('hidden');
+						applyBtn.removeEventListener('click', onApply);
+						manualBtn.removeEventListener('click', onManual);
+						cancelBtn.removeEventListener('click', onCancel);
+					}
+
+					function onApply() {
+						// construct merged object from suggestions
+						const merged = Object.assign({}, base);
+						Object.entries(suggestions).forEach(([k, info]) => {
+							merged[k] = info.value;
+						});
+						cleanup();
+						// apply merged into edit form fields and submit automatically
+						applySuggestedMergeToForm(merged);
+					}
+
+					function onManual() {
+						cleanup();
+						// populate form with remote and let user edit manually
+						showContactForm(remote, editingIndex);
+					}
+
+					function onCancel() {
+						cleanup();
+					}
+
+					applyBtn.addEventListener('click', onApply);
+					manualBtn.addEventListener('click', onManual);
+					cancelBtn.addEventListener('click', onCancel);
+				}
+
+				function applySuggestedMergeToForm(merged) {
+					// populate the form fields with merged values and then programmatically submit
+					document.getElementById('contact-name').value = merged.name || '';
+					document.getElementById('contact-role').value = merged.role || '';
+					document.getElementById('contact-city').value = merged.city || '';
+					document.getElementById('contact-email').value = merged.email || '';
+					document.getElementById('contact-phone').value = merged.phone || '';
+					document.getElementById('contact-linkedin').value = merged.linkedin || '';
+					document.getElementById('contact-twitter').value = merged.twitter || '';
+					document.getElementById('contact-github').value = merged.github || '';
+					document.getElementById('contact-calendar').value = merged.calendar || '';
+					document.getElementById('contact-photo').value = merged.photo || '';
+					// Submit the form programmatically
+					const form = document.getElementById('contact-form-element');
+					if (form) form.requestSubmit();
+				}
+
+
+				// Export contacts as a JSON file download
+				function exportContacts() {
+					try {
+						const dataStr = JSON.stringify(contacts, null, 2);
+						const blob = new Blob([dataStr], { type: 'application/json' });
+						const url = URL.createObjectURL(blob);
+						const a = document.createElement('a');
+						a.href = url;
+						a.download = 'contacts.json';
+						document.body.appendChild(a);
+						a.click();
+						document.body.removeChild(a);
+						URL.revokeObjectURL(url);
+						showToast('Export started — check your downloads folder.', 'success');
+					} catch (err) {
+						showToast('Export failed. See console for details.', 'error');
+						console.error('Export failed:', err);
+					}
+				}
+
+				// Handle import file input
+				function handleImportFile(e) {
+					const file = e.target.files && e.target.files[0];
+					if (!file) return;
+
+					const reader = new FileReader();
+					reader.onload = function(evt) {
+						try {
+							const parsed = JSON.parse(evt.target.result);
+							if (!Array.isArray(parsed)) {
+								showToast('Imported file must be a JSON array of contacts.', 'error');
+								return;
+							}
+							contacts = parsed;
+							saveContacts();
+							renderAdminContacts();
+							renderContactCards();
+							showToast('Contacts imported successfully.', 'success');
+							// clear the input so same file can be re-imported if needed
+							e.target.value = '';
+						} catch (err) {
+							showToast('Failed to parse imported file.', 'error');
+							console.error('Import failed:', err);
+						}
+					};
+					reader.readAsText(file);
+				}
+
+				// Prompt user for GitHub details and try to commit contacts.json to the repository
+				async function saveToGitHubPrompt() {
+					// Minimal prompt flow — users must provide a personal access token with repo permissions
+					const token = prompt('Enter a GitHub Personal Access Token with repo permissions (scoped to public_repo):');
+					if (!token) {
+						showToast('GitHub save canceled.', 'warning');
+						return;
+					}
+
+					const owner = 'ketchumj13';
+					const repo = 'Accion-Contact-Tree';
+					const path = 'contacts.json';
+					const branch = prompt('Branch to commit to (default: main):', 'main') || 'main';
+					const message = prompt('Commit message:', 'Update contacts via web editor') || 'Update contacts via web editor';
+
+					try {
+						await saveToGitHub({ owner, repo, path, branch, message, token, contentObj: contacts });
+						showToast('Successfully saved contacts.json to GitHub!', 'success');
+					} catch (err) {
+						showToast('Failed to save to GitHub. Check console for details.', 'error');
+						console.error('GitHub save failed:', err);
+					}
+				}
+
+				// Save a JSON file to a GitHub repo by creating/updating a file using the REST API
+				// Note: This requires a Personal Access Token with repo scope. This operation runs in the user's browser.
+				async function saveToGitHub({ owner, repo, path, branch = 'main', message = 'Update contacts', token, contentObj }) {
+					if (!token) throw new Error('No token provided');
+
+					const apiBase = 'https://api.github.com';
+					const getUrl = `${apiBase}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch)}`;
+
+					// Check if file exists to get sha (for update)
+					let sha = null;
+					try {
+						const resp = await fetch(getUrl, { headers: { Authorization: `token ${token}` } });
+						if (resp.ok) {
+							const data = await resp.json();
+							sha = data.sha;
+						}
+					} catch (err) {
+						// ignore - file may not exist yet
+					}
+
+					const contentStr = JSON.stringify(contentObj, null, 2);
+					const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
+
+					const payload = {
+						message,
+						content: contentBase64,
+						branch
+					};
+					if (sha) payload.sha = sha;
+
+					const putUrl = `${apiBase}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
+					const putResp = await fetch(putUrl, {
+						method: 'PUT',
+						headers: {
+							Authorization: `token ${token}`,
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify(payload)
+					});
+
+					if (!putResp.ok) {
+						const text = await putResp.text();
+						throw new Error(`GitHub API error: ${putResp.status} ${text}`);
+					}
+					return await putResp.json();
+				}
+
+				// Edit contact
+				function editContact(index) {
+					const contact = contacts[index];
+					showContactForm(contact, index);
+				}
+
+				// Delete contact
+				function deleteContact(index) {
+					const contact = contacts[index];
+  
+					if (confirm(`Are you sure you want to delete ${contact.name}?\n\nThis action cannot be undone.`)) {
+						try {
+							contacts.splice(index, 1);
+							saveContacts();
+							renderAdminContacts();
+							showToast(`${contact.name} has been deleted.`, 'success');
+						} catch (error) {
+							showToast('Failed to delete contact. Please try again.', 'error');
+							console.error('Delete failed:', error);
+						}
+					}
+				}
+
+				// Handle keyboard navigation and shortcuts
+				document.addEventListener('keydown', function(e) {
+					// Escape key handling
+					if (e.key === 'Escape') {
+						const contactForm = document.getElementById('contact-form');
+    
+						if (!adminPage.classList.contains('hidden')) {
+							if (contactForm && !contactForm.classList.contains('hidden')) {
+								hideContactForm();
+							} else if (isAuthenticated) {
+								if (confirm('Are you sure you want to return to the main page?')) {
+									showMainPage();
+								}
+							}
+						}
+						hideTooltip();
+					}
+  
+					// Quick admin access with Ctrl+A
+					if (e.ctrlKey && e.key === 'a' && !e.target.matches('input, textarea')) {
+						e.preventDefault();
+						showAdminPage();
+					}
+				});
+
+				// Handle window resize for responsive design
+				window.addEventListener('resize', function() {
+					// Hide tooltip on resize to prevent positioning issues
+					hideTooltip();
+  
+					// Force re-render if needed for responsive adjustments
+					if (mainPage && !mainPage.classList.contains('hidden')) {
+						renderContactCards();
+					}
+				});
+
+				// Handle online/offline status
+				window.addEventListener('online', () => {
+					showToast('Connection restored!', 'success');
+				});
+
+				window.addEventListener('offline', () => {
+					showToast('You are now offline. Some features may not work.', 'warning');
+				});
+
+				// Initialize service worker for offline functionality if available
+				if ('serviceWorker' in navigator) {
+					window.addEventListener('load', () => {
+						console.log('Contact Hub application loaded successfully');
+					});
+				}

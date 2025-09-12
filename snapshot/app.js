@@ -394,7 +394,10 @@ function handleAdminAuth(e) {
   
 	const password = passwordInput.value;
   
-	if (password === 'accionmicrosoft25') {
-		isAuthenticated = true;
+		if (password === 'accionmicrosoft25') {
+			isAuthenticated = true;
     
-		const authForm = document.getElementById('auth-form');
+			const authForm = document.getElementById('auth-form');
+			// ...existing code for successful authentication...
+		}
+	}
