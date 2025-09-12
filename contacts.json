@@ -1,0 +1,41 @@
+[
+  {
+    "name": "Tarun Agarwal",
+    "role": "SVP Sales",
+    "city": "New Jersey",
+    "email": "tarun.agarwal@accionlabs.com",
+    "phone": "",
+    "twitter": "",
+    "github": "",
+    "linkedin": "https://www.linkedin.com/in/itarunagarwal/",
+    "calendar": "",
+    "photo": "Tarun_Headshot.jpg",
+    "alt": "Portrait of Tarun Agarwal"
+  },
+  {
+    "name": "Jakob Ketchum",
+    "role": "Sales Director",
+    "city": "Texas",
+    "email": "jakob.ketchum@accionlabs.com",
+    "phone": "",
+    "linkedin": "https://www.linkedin.com/in/jakob-ketchum-6742303b/",
+    "twitter": "",
+    "github": "",
+    "calendar": "",
+    "photo": "https://media.licdn.com/dms/image/v2/D5603AQE7eqp6CiMbRA/profile-displayphoto-shrink_800_800/B56ZUfASVKHQAc-/0/1739981924115?e=1760572800&v=beta&t=SmXsFUtuhqH9ycrY0NR5ic9aFUI6aG9ezGaTz6YHIGw",
+    "alt": "Portrait of Jakob Ketchum"
+  },
+  {
+    "name": "Sanket Shah",
+    "role": "Senior Solution Architect",
+    "city": "Pune, India",
+    "email": "sanket.shah@accionlabs.com",
+    "phone": "",
+    "twitter": "",
+    "github": "",
+    "linkedin": "https://www.linkedin.com/in/sankettshah/",
+    "calendar": "",
+    "photo": "Sanket_Headshot.jpg",
+    "alt": "Portrait of Sanket Shah"
+  }
+]
