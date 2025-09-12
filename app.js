@@ -61,6 +61,68 @@ async function requireGitHubToken() {
   }
 }
 
+// --- GitHub API Branch & Commit Logic ---
+// Usage: Call commitAdminChangeToGitHub() after admin data update
+async function commitAdminChangeToGitHub() {
+  const token = await requireGitHubToken();
+  const owner = 'ketchumj13';
+  const repo = 'Accion-Contact-Tree';
+  const baseBranch = 'main';
+  const filePath = 'contacts.json';
+  const commitMessage = 'Admin edit: update contacts';
+
+  // 1. Get latest commit SHA of base branch
+  const branchResp = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${baseBranch}`, {
+    headers: { Authorization: `token ${token}` }
+  });
+  if (!branchResp.ok) throw new Error('Failed to get base branch SHA');
+  const branchData = await branchResp.json();
+  const baseSha = branchData.object.sha;
+
+  // 2. Generate new branch name (edit-<timestamp>)
+  const editBranch = `edit-${Date.now()}`;
+
+  // 3. Create new branch
+  const createBranchResp = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs`, {
+    method: 'POST',
+    headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ref: `refs/heads/${editBranch}`,
+      sha: baseSha
+    })
+  });
+  if (!createBranchResp.ok) throw new Error('Failed to create new branch');
+
+  // 4. Prepare file content (contacts as JSON)
+  const contentStr = JSON.stringify(contacts, null, 2);
+  const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
+
+  // 5. Commit file to new branch
+  const putUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
+  const putResp = await fetch(putUrl, {
+    method: 'PUT',
+    headers: {
+      Authorization: `token ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      message: commitMessage,
+      content: contentBase64,
+      branch: editBranch
+    })
+  });
+  if (!putResp.ok) {
+    const text = await putResp.text();
+    throw new Error(`GitHub API error: ${putResp.status} ${text}`);
+  }
+  showToast(`Committed to branch ${editBranch}.`, 'success');
+  // Optionally, prompt for PR here
+  if (confirm(`Commit successful! Would you like to open a pull request for branch ${editBranch}?`)) {
+    const prUrl = `https://github.com/ketchumj13/Accion-Contact-Tree/compare/main...${editBranch}?expand=1`;
+    window.open(prUrl, '_blank');
+  }
+}
+
 // DOM elements
 const mainPage = document.getElementById('main-page');
 const adminPage = document.getElementById('admin-page');
@@ -320,6 +382,18 @@ function setupEventListeners() {
   const contactFormElement = document.getElementById('contact-form-element');
   if (contactFormElement) {
     contactFormElement.addEventListener('submit', handleContactForm);
+  }
+
+  // Commit to GitHub button
+  const commitGithubBtn = document.getElementById('commit-github-btn');
+  if (commitGithubBtn) {
+    commitGithubBtn.addEventListener('click', async () => {
+      try {
+        await commitAdminChangeToGitHub();
+      } catch (err) {
+        showToast('GitHub commit failed: ' + err.message, 'error');
+      }
+    });
   }
   
   const cancelForm = document.getElementById('cancel-form');
