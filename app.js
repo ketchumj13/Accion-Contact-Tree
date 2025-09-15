@@ -180,7 +180,48 @@ document.addEventListener('DOMContentLoaded', function() {
     renderOfferings();
     setupEventListeners();
     setupOfferingsToggle();
-    setupOfferingsAdmin();
+  setupOfferingsAdmin();
+// Setup admin offerings form logic
+function setupOfferingsAdmin() {
+  const offeringsForm = document.getElementById('offerings-form');
+  if (!offeringsForm) return;
+  offeringsForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    // Get form values
+    const title = document.getElementById('offering-title').value.trim();
+    const pdfUrl = document.getElementById('offering-pdf').value.trim();
+    const previewImg = document.getElementById('offering-preview').value.trim();
+    const description = document.getElementById('offering-desc').value.trim();
+
+    // Validate required fields
+    if (!title || !pdfUrl || !previewImg) {
+      showToast('Please fill in all required fields for the offering.', 'error');
+      return;
+    }
+    // Validate URLs
+    if (!isValidUrl(pdfUrl)) {
+      showToast('Please enter a valid PDF URL.', 'error');
+      return;
+    }
+    if (!isValidUrl(previewImg)) {
+      showToast('Please enter a valid preview image URL.', 'error');
+      return;
+    }
+
+    // Add new offering
+    offerings.push({
+      title,
+      pdfUrl,
+      previewImg,
+      description
+    });
+    saveOfferings();
+    renderOfferings();
+    // Reset form
+    offeringsForm.reset();
+    showToast('Offering added successfully!', 'success');
+  });
+}
 // Render offerings section
 function renderOfferings() {
   const offeringsList = document.getElementById('offerings-list');
