@@ -1,53 +1,52 @@
 // Initial contact data
 const initialContacts = [
-  {
-    name: "Tarun Agarwal",
-    role: "SVP Sales",
-    city: "New Jersey", 
+  // Collapse/expand logic for offerings section
+  function setupOfferingsToggle() {
+    city: "New Jersey",
     email: "tarun.agarwal@accionlabs.com",
     phone: "",
-  twitter: "",
-  github: "",
-  linkedin: "https://www.linkedin.com/in/itarunagarwal/",
-    calendar: "",
-  photo: "Tarun_Headshot.jpg",
-  alt: "Portrait of Tarun Agarwal"
-  },
-  {
-    name: "Jakob Ketchum", 
-    role: "Sales Director",
-    city: "Texas",
-    email: "jakob.ketchum@accionlabs.com",
-    phone: "",
-  twitter: "",
-  github: "",
-  linkedin: "https://www.linkedin.com/in/jakob-ketchum-6742303b/",
-    calendar: "",
-  photo: "Jakob_Headshot.jpg",
-  alt: "Portrait of Jakob Ketchum"
-  },
-  {
-    name: "Sanket Shah",
-    role: "Senior Solution Architect",
-    city: "Pune, India",
-    email: "sanket.shah@accionlabs.com",
-    phone: "",
-  twitter: "",
-  github: "",
-    linkedin: "https://www.linkedin.com/in/sankettshah/",
-    calendar: "",
-  photo: "Sanket_Headshot.jpg",
-  alt: "Portrait of Sanket Shah"
-  }
-];
-
-// Application state
-
-let contacts = [];
-let isAuthenticated = false;
-let editingIndex = -1;
-let githubToken = null;
-
+    twitter: "",
+    github: "",
+    linkedin: "https://www.linkedin.com/in/itarunagarwal/",
+    {
+      name: "Tarun Agarwal",
+      role: "SVP Sales",
+      city: "New Jersey",
+      email: "tarun.agarwal@accionlabs.com",
+      phone: "",
+      twitter: "",
+      github: "",
+      linkedin: "https://www.linkedin.com/in/itarunagarwal/",
+      calendar: "",
+      photo: "Tarun_Headshot.jpg",
+      alt: "Portrait of Tarun Agarwal"
+    },
+    {
+      name: "Jakob Ketchum",
+      role: "Sales Director",
+      city: "Texas",
+      email: "jakob.ketchum@accionlabs.com",
+      phone: "",
+      twitter: "",
+      github: "",
+      linkedin: "https://www.linkedin.com/in/jakob-ketchum-6742303b/",
+      calendar: "",
+      photo: "Jakob_Headshot.jpg",
+      alt: "Portrait of Jakob Ketchum"
+    },
+    {
+      name: "Sanket Shah",
+      role: "Senior Solution Architect",
+      city: "Pune, India",
+      email: "sanket.shah@accionlabs.com",
+      phone: "",
+      twitter: "",
+      github: "",
+      linkedin: "https://www.linkedin.com/in/sankettshah/",
+      calendar: "",
+      photo: "Sanket_Headshot.jpg",
+      alt: "Portrait of Sanket Shah"
+    }
 // Load offerings from localStorage or use default
 function loadOfferings() {
   const saved = localStorage.getItem('accion-offerings');
@@ -67,12 +66,11 @@ function saveOfferings() {
 // Offerings data model (example)
 let offerings = [
   {
-    title: "Azure Migration Services",
-    pdfUrl: "offerings/azure-migration.pdf",
-    previewImg: "offerings/azure-migration-preview.png",
-    description: "Overview of our Azure migration capabilities."
-  },
-  // Add more offerings as needed
+    title: "ACHIEVE with Agentic AI",
+    pdfUrl: "offerings/AI/Accion_ACHIEVE with Agentic AI_FY26.pdf",
+    previewImg: "offerings/AI/Accion_ACHIEVE_with_Agentic_AI_Thumbnail.png",
+    description: ""
+  }
 ];
 
 // Prompt for GitHub token if not already set
@@ -231,18 +229,64 @@ function renderOfferings() {
     offeringsList.innerHTML = '<p style="color: var(--color-text-secondary); font-style: italic;">No offerings available.</p>';
     return;
   }
-  offerings.forEach(offering => {
+  offerings.forEach((offering, idx) => {
     const offeringDiv = document.createElement('div');
     offeringDiv.className = 'offering-item';
     offeringDiv.innerHTML = `
-      <a href="${offering.pdfUrl}" target="_blank" class="offering-link">
+      <button class="offering-link" style="background:none;border:none;padding:0;cursor:pointer;" data-offering-idx="${idx}">
         <img src="${offering.previewImg}" alt="Preview of ${offering.title}" class="offering-preview">
         <span class="offering-title">${offering.title}</span>
-      </a>
+      </button>
       <div class="offering-desc">${offering.description || ''}</div>
     `;
     offeringsList.appendChild(offeringDiv);
   });
+  // Add click listeners for popup
+  document.querySelectorAll('.offering-link').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      const idx = this.getAttribute('data-offering-idx');
+      if (idx !== null) showOfferingPopup(offerings[idx]);
+    });
+  });
+}
+
+// Popup PDF viewer for offering
+function showOfferingPopup(offering) {
+  // Remove any existing popup
+  let popup = document.getElementById('offering-popup');
+  if (popup) popup.remove();
+  popup = document.createElement('div');
+  popup.id = 'offering-popup';
+  popup.style.position = 'fixed';
+  popup.style.top = '0';
+  popup.style.left = '0';
+  popup.style.width = '100vw';
+  popup.style.height = '100vh';
+  popup.style.background = 'rgba(0,0,0,0.75)';
+  popup.style.display = 'flex';
+  popup.style.flexDirection = 'column';
+  popup.style.alignItems = 'center';
+  popup.style.justifyContent = 'center';
+  popup.style.zIndex = '9999';
+  popup.innerHTML = `
+    <div style="background:#fff;max-width:90vw;max-height:90vh;padding:2rem;border-radius:12px;box-shadow:0 4px 32px rgba(0,0,0,0.2);display:flex;flex-direction:column;align-items:center;">
+      <h2 style="margin-bottom:1rem;">${offering.title}</h2>
+      <iframe src="${offering.pdfUrl}" style="width:70vw;height:60vh;border:1px solid #ccc;border-radius:8px;" title="${offering.title}"></iframe>
+      <div style="margin-top:1.5rem;display:flex;gap:1rem;">
+        <button id="offering-popup-back" class="btn btn--secondary">Back to Contacts</button>
+        <a href="${offering.pdfUrl}" download class="btn btn--primary" style="text-decoration:none;">Download PDF</a>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(popup);
+  document.getElementById('offering-popup-back').onclick = function() {
+    popup.remove();
+  };
+  // Optional: close popup on outside click
+  popup.addEventListener('click', function(e) {
+    if (e.target === popup) popup.remove();
+  });
+}
 }
 
 // Collapse/expand logic for offerings section
@@ -258,7 +302,6 @@ function setupOfferingsToggle() {
     if (arrow) arrow.innerHTML = expanded ? '&#9654;' : '&#9660;';
   });
 }
-});
 
 // Load contacts from localStorage or use initial data
 function loadContacts() {
