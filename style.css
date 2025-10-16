@@ -434,6 +434,13 @@ pre code {
   background: var(--color-secondary-hover);
 }
 
+/* PDF iframe appearance tweaks: increase contrast and darken text for better readability */
+.offering-pdf-iframe {
+  filter: contrast(1.05) brightness(0.95);
+  /* ensure iframe content scales well on high-DPI screens */
+  transform-origin: center center;
+}
+
 .btn--secondary:active {
   background: var(--color-secondary-active);
 }
@@ -1320,4 +1327,140 @@ h1, h2, h3, h4, h5, h6 {
 
 [data-color-scheme="dark"] .tooltip-content::after {
   border-top-color: var(--color-gray-200);
+}
+
+/* Ensure text inside the offering popup is dark (fix white-on-white buttons/links) */
+#offering-popup,
+#offering-popup * {
+  color: #0b0b0b !important;
+}
+
+#offering-popup .btn {
+  /* Ensure button labels are dark but preserve button backgrounds */
+  color: #0b0b0b !important;
+}
+
+/* Ensure offerings list text is white on dark background */
+.offerings-list,
+.offerings-list * {
+  color: var(--color-white) !important;
+}
+
+/* Stronger, specific rules for offering title and link elements */
+.offerings-list .offering-link,
+.offerings-list .offering-link .offering-title,
+.offerings-list .offering-link span,
+.offerings-list .offering-link img {
+  color: var(--color-white) !important;
+  fill: var(--color-white) !important;
+}
+
+/* Strongest rules to ensure offerings text is white and image alt text doesn't render in black */
+#offerings-list,
+#offerings-list * {
+  color: var(--color-white) !important;
+  -webkit-text-fill-color: var(--color-white) !important;
+}
+
+/* Hide broken-image alt text by collapsing font-size for preview images; title remains visible */
+.offerings-list .offering-preview {
+  font-size: 0 !important;
+  line-height: 0 !important;
+}
+
+.offerings-list .offering-title {
+  font-size: var(--font-size-md) !important;
+  color: var(--color-white) !important;
+  -webkit-text-fill-color: var(--color-white) !important;
+}
+
+/* Global fallback: ensure any element with this class is white */
+.offering-title {
+  color: var(--color-white) !important;
+  -webkit-text-fill-color: var(--color-white) !important;
+}
+
+/* Offerings section title */
+.offerings-section .section-title {
+  font-size: var(--font-size-xl);
+  color: var(--color-text);
+  margin: var(--space-16) 0 var(--space-8) 0;
+  text-align: center !important; /* center the Offerings header */
+}
+
+/* Make offerings list visible and layout like contact list */
+.offerings-list {
+  display: block !important;
+  margin-top: 30px; /* increased buffer (approx. 3x) between last contact and offerings header */
+}
+
+/* Ensure the offerings section cannot collapse margins with preceding content
+   by adding non-collapsible padding on the section container. */
+.offerings-section {
+  padding-top: 20px; /* prevents margin-collapse and guarantees visible spacing */
+}
+
+/* Center titles inside offering cards and ensure white text for dark mode */
+.offering-item .offering-title {
+  color: var(--color-white) !important; /* keep titles readable in dark mode */
+  text-align: center !important; /* center offering titles */
+  display: block !important;
+}
+
+/* Offerings layout: match contact cards width and center horizontally */
+#offerings-list {
+  max-width: 720px; /* same as .contact-grid max-width */
+  width: 100%;
+  margin: 0 auto; /* center */
+  padding: var(--space-12) 0;
+  box-sizing: border-box;
+}
+
+.offering-item {
+  margin: var(--space-12) 0;
+}
+
+.offering-link {
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+/* Ensure preview images fit within the offerings container */
+.offering-preview,
+#offerings-list .offering-preview {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  max-height: 360px; /* prevent extremely tall images */
+  object-fit: contain !important;
+  display: block;
+  margin: 0 auto;
+  border-radius: 8px;
+}
+
+/* Stronger constraint: ensure offering card cannot expand wider than contact cards */
+#offerings-list .offering-item.contact-card {
+  max-width: 720px !important;
+  width: 100% !important;
+  margin: var(--space-12) auto !important;
+  box-sizing: border-box !important;
+}
+
+/* Ensure inner content respects the card width */
+#offerings-list .offering-content {
+  width: 100% !important;
+  overflow: hidden;
+}
+
+/* Make the click area and image block-level and constrained */
+#offerings-list .offering-link {
+  display: block !important;
+  width: 100% !important;
+  text-align: center !important;
+}
+
+/* Safety: cap preview height on very large images */
+#offerings-list .offering-preview {
+  max-height: 320px !important;
 }

@@ -1,52 +1,71 @@
 // Initial contact data
 const initialContacts = [
-  // Collapse/expand logic for offerings section
-  function setupOfferingsToggle() {
-    city: "New Jersey",
+   {
+    name: "Nitin Agarwal",
+    role: "Global Chief Platform Officer",
+    city: "Baltimore, Maryland",
+    email: "nitin.agarwal@accionlabs.com",
+    phone: "",
+    twitter: "",
+    github: "",
+    linkedin: "https://www.linkedin.com/in/anitin/",
+    calendar: "",
+    photo: "https://media.licdn.com/dms/image/v2/C5603AQFXvOgaYL3o6g/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1661889810283?e=1763596800&v=beta&t=FGfuH_HmvW48Up42lLvdLCns_vET6CmLok5c_DUAUsg",
+    alt: "nitin_headshot.jpg"
+  },
+   {
+    name: "Tarun Agarwal",
+    role: "SVP Sales",
+    city: "New York, New York",
     email: "tarun.agarwal@accionlabs.com",
     phone: "",
     twitter: "",
     github: "",
     linkedin: "https://www.linkedin.com/in/itarunagarwal/",
-    {
-      name: "Tarun Agarwal",
-      role: "SVP Sales",
-      city: "New Jersey",
-      email: "tarun.agarwal@accionlabs.com",
-      phone: "",
-      twitter: "",
-      github: "",
-      linkedin: "https://www.linkedin.com/in/itarunagarwal/",
-      calendar: "",
-      photo: "Tarun_Headshot.jpg",
-      alt: "Portrait of Tarun Agarwal"
-    },
-    {
-      name: "Jakob Ketchum",
-      role: "Sales Director",
-      city: "Texas",
-      email: "jakob.ketchum@accionlabs.com",
-      phone: "",
-      twitter: "",
-      github: "",
-      linkedin: "https://www.linkedin.com/in/jakob-ketchum-6742303b/",
-      calendar: "",
-      photo: "Jakob_Headshot.jpg",
-      alt: "Portrait of Jakob Ketchum"
-    },
-    {
-      name: "Sanket Shah",
-      role: "Senior Solution Architect",
-      city: "Pune, India",
-      email: "sanket.shah@accionlabs.com",
-      phone: "",
-      twitter: "",
-      github: "",
-      linkedin: "https://www.linkedin.com/in/sankettshah/",
-      calendar: "",
-      photo: "Sanket_Headshot.jpg",
-      alt: "Portrait of Sanket Shah"
-    }
+    calendar: "",
+    photo: "Tarun_Headshot.jpg",
+    alt: "Portrait of Tarun Agarwal"
+  },
+  {
+    name: "Sarita Janjani",
+    role: "AVP Alliances",
+    city: "Seattle, Washington",
+    email: "sarita.janjani@accionlabs.com",
+    phone: "",
+    linkedin: "https://www.linkedin.com/in/sarita-janjani-286a7934/",
+    twitter: "",
+    github: "",
+    calendar: "",
+    photo: "https://media.licdn.com/dms/image/v2/C5603AQG-VrL5if5LwQ/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1660336692359?e=1763596800&v=beta&t=117aMF8QC9EwrySJpNLbOOTjuKlkMR3D3wnOopNPQxg",
+    alt: "Portrait of Sarita Janjani"
+  },
+  {
+    name: "Jakob Ketchum",
+    role: "Sales Director",
+    city: "Temple, Texas",
+    email: "jakob.ketchum@accionlabs.com",
+    phone: "",
+    twitter: "",
+    github: "",
+    linkedin: "https://www.linkedin.com/in/jakob-ketchum-6742303b/",
+    calendar: "",
+    photo: "Jakob_Headshot.jpg",
+    alt: "Portrait of Jakob Ketchum"
+  },
+  {
+    name: "Sanket Shah",
+    role: "Senior Solution Architect",
+    city: "Pune, India",
+    email: "sanket.shah@accionlabs.com",
+    phone: "",
+    twitter: "",
+    github: "",
+    linkedin: "https://www.linkedin.com/in/sankettshah/",
+    calendar: "",
+    photo: "Sanket_Headshot.jpg",
+    alt: "Portrait of Sanket Shah"
+  }
+];
 // Load offerings from localStorage or use default
 function loadOfferings() {
   const saved = localStorage.getItem('accion-offerings');
@@ -68,7 +87,7 @@ let offerings = [
   {
     title: "ACHIEVE with Agentic AI",
     pdfUrl: "offerings/AI/Accion_ACHIEVE with Agentic AI_FY26.pdf",
-    previewImg: "offerings/AI/Accion_ACHIEVE_with_Agentic_AI_Thumbnail.png",
+    previewImg: "offerings/AI/Offering_AI_Thumbnail.png",
     description: ""
   }
 ];
@@ -178,8 +197,9 @@ document.addEventListener('DOMContentLoaded', function() {
     renderOfferings();
     setupEventListeners();
     setupOfferingsToggle();
-  setupOfferingsAdmin();
-// Setup admin offerings form logic
+    setupOfferingsAdmin();
+  });
+  // Setup admin offerings form logic
 function setupOfferingsAdmin() {
   const offeringsForm = document.getElementById('offerings-form');
   if (!offeringsForm) return;
@@ -224,20 +244,33 @@ function setupOfferingsAdmin() {
 function renderOfferings() {
   const offeringsList = document.getElementById('offerings-list');
   if (!offeringsList) return;
+  // Force inline layout reset so changes appear even if CSS is cached
   offeringsList.innerHTML = '';
+  offeringsList.style.marginTop = '30px';
+  const offeringsSection = document.querySelector('.offerings-section');
+  if (offeringsSection) offeringsSection.style.paddingTop = '20px';
   if (offerings.length === 0) {
     offeringsList.innerHTML = '<p style="color: var(--color-text-secondary); font-style: italic;">No offerings available.</p>';
     return;
   }
   offerings.forEach((offering, idx) => {
     const offeringDiv = document.createElement('div');
-    offeringDiv.className = 'offering-item';
+    // Reuse contact-card visual style to keep offerings matching contact card width and appearance
+    offeringDiv.className = 'offering-item contact-card';
+    // Ensure this specific offering card cannot exceed the contact card width and is centered
+    offeringDiv.style.maxWidth = '720px';
+    offeringDiv.style.margin = '12px auto';
+    offeringDiv.style.boxSizing = 'border-box';
     offeringDiv.innerHTML = `
-      <button class="offering-link" style="background:none;border:none;padding:0;cursor:pointer;" data-offering-idx="${idx}">
-        <img src="${offering.previewImg}" alt="Preview of ${offering.title}" class="offering-preview">
-        <span class="offering-title">${offering.title}</span>
-      </button>
-      <div class="offering-desc">${offering.description || ''}</div>
+      <div class="offering-content" style="text-align: center;">
+        <button class="offering-link" style="background:none;border:none;padding:0;cursor:pointer;display:block;margin:0 auto;" data-offering-idx="${idx}">
+          <img src="${offering.previewImg}" alt="Preview of ${offering.title}" class="offering-preview" width="100%" height="auto" style="width:100%;height:auto;max-height:320px;object-fit:contain;display:block;margin:0 auto;border-radius:8px;">
+        </button>
+        <div class="offering-body" style="padding: var(--space-12); text-align: center;">
+          <h4 class="offering-title" style="color: #ffffff !important; text-align: center !important; margin: 0 0 var(--space-8) 0;">${offering.title}</h4>
+          <div class="offering-desc" style="text-align: center;">${offering.description || ''}</div>
+        </div>
+      </div>
     `;
     offeringsList.appendChild(offeringDiv);
   });
@@ -269,11 +302,11 @@ function showOfferingPopup(offering) {
   popup.style.justifyContent = 'center';
   popup.style.zIndex = '9999';
   popup.innerHTML = `
-    <div style="background:#fff;max-width:90vw;max-height:90vh;padding:2rem;border-radius:12px;box-shadow:0 4px 32px rgba(0,0,0,0.2);display:flex;flex-direction:column;align-items:center;">
-      <h2 style="margin-bottom:1rem;">${offering.title}</h2>
-      <iframe src="${offering.pdfUrl}" style="width:70vw;height:60vh;border:1px solid #ccc;border-radius:8px;" title="${offering.title}"></iframe>
+    <div style="background:#fff;color:#0b0b0b;max-width:90vw;max-height:90vh;padding:2rem;border-radius:12px;box-shadow:0 4px 32px rgba(0,0,0,0.2);display:flex;flex-direction:column;align-items:center;">
+      <h2 style="margin-bottom:1rem;color:inherit;">${offering.title}</h2>
+  <iframe class="offering-pdf-iframe" src="${offering.pdfUrl}" style="width:70vw;height:60vh;border:1px solid #ccc;border-radius:8px;" title="${offering.title}"></iframe>
       <div style="margin-top:1.5rem;display:flex;gap:1rem;">
-        <button id="offering-popup-back" class="btn btn--secondary">Back to Contacts</button>
+  <button id="offering-popup-back" class="btn btn--secondary" style="color:#0b0b0b;">Back to Contacts</button>
         <a href="${offering.pdfUrl}" download class="btn btn--primary" style="text-decoration:none;">Download PDF</a>
       </div>
     </div>
@@ -286,7 +319,6 @@ function showOfferingPopup(offering) {
   popup.addEventListener('click', function(e) {
     if (e.target === popup) popup.remove();
   });
-}
 }
 
 // Collapse/expand logic for offerings section

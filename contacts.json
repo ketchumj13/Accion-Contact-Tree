@@ -1,8 +1,21 @@
 [
   {
+    "name": "Nitin Agarwal",
+    "role": "Global Chief Platform Officer",
+    "city": "Baltimore, Maryland",
+    "email": "nitin.agarwal@accionlabs.com",
+    "phone": "",
+    "twitter": "",
+    "github": "",
+    "linkedin": "https://www.linkedin.com/in/anitin/",
+    "calendar": "",
+    "photo": "https://media.licdn.com/dms/image/v2/C5603AQFXvOgaYL3o6g/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1661889810283?e=1763596800&v=beta&t=FGfuH_HmvW48Up42lLvdLCns_vET6CmLok5c_DUAUsg",
+    "alt": "Portrait of Nitin Agarwal"
+  },
+  {
     "name": "Tarun Agarwal",
     "role": "SVP Sales",
-    "city": "New Jersey",
+    "city": "New York, New York",
     "email": "tarun.agarwal@accionlabs.com",
     "phone": "",
     "twitter": "",
@@ -11,6 +24,19 @@
     "calendar": "",
     "photo": "Tarun_Headshot.jpg",
     "alt": "Portrait of Tarun Agarwal"
+  },
+  {
+    "name": "Sarita Janjani",
+    "role": "AVP Alliances",
+    "city": "Seattle, Washington",
+    "email": "sarita.janjani@accionlabs.com",
+    "phone": "",
+    "linkedin": "https://www.linkedin.com/in/sarita-janjani-286a7934/",
+    "twitter": "",
+    "github": "",
+    "calendar": "",
+    "photo": "https://media.licdn.com/dms/image/v2/C5603AQG-VrL5if5LwQ/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1660336692359?e=1763596800&v=beta&t=117aMF8QC9EwrySJpNLbOOTjuKlkMR3D3wnOopNPQxg",
+    "alt": "Portrait of Sarita Janjani"
   },
   {
     "name": "Jakob Ketchum",
